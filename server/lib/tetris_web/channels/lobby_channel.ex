@@ -1,0 +1,33 @@
+defmodule TetrisWeb.LobbyChannel do
+  use TetrisWeb, :channel
+  alias TetrisGame.Lobby
+
+  @impl true
+  def join("lobby:main", _payload, socket) do
+    {:ok, %{player_id: socket.assigns.player_id}, socket}
+  end
+
+  @impl true
+  def handle_in("list_rooms", _payload, socket) do
+    rooms = Lobby.list_rooms()
+    {:reply, {:ok, %{rooms: rooms}}, socket}
+  end
+
+  def handle_in("create_room", payload, socket) do
+    opts = %{
+      host: socket.assigns.player_id,
+      name: Map.get(payload, "name", "Unnamed Room"),
+      max_players: Map.get(payload, "max_players", 4),
+      password: Map.get(payload, "password")
+    }
+
+    case Lobby.create_room(opts) do
+      {:ok, room_id} ->
+        broadcast!(socket, "room_created", %{room_id: room_id, name: opts.name})
+        {:reply, {:ok, %{room_id: room_id}}, socket}
+
+      {:error, reason} ->
+        {:reply, {:error, %{reason: to_string(reason)}}, socket}
+    end
+  end
+end
