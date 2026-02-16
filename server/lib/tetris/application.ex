@@ -6,6 +6,8 @@ defmodule Tetris.Application do
     children = [
       TetrisWeb.Telemetry,
       {Phoenix.PubSub, name: Tetris.PubSub},
+      {Registry, keys: :unique, name: TetrisGame.RoomRegistry},
+      TetrisGame.RoomSupervisor,
       TetrisWeb.Endpoint
     ]
 
