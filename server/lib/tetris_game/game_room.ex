@@ -8,10 +8,12 @@ defmodule TetrisGame.GameRoom do
   """
 
   use GenServer
+  require Logger
 
   alias Tetris.PlayerState
   alias Tetris.GameLogic
   alias Tetris.Board
+  alias TetrisGame.Lobby
 
   @tick_interval 50
 
@@ -20,7 +22,6 @@ defmodule TetrisGame.GameRoom do
     :host,
     :name,
     :max_players,
-    :password,
     :status,
     :players,
     :player_order,
@@ -34,7 +35,6 @@ defmodule TetrisGame.GameRoom do
           host: String.t(),
           name: String.t(),
           max_players: pos_integer(),
-          password: String.t() | nil,
           status: :waiting | :playing | :finished,
           players: %{String.t() => PlayerState.t()},
           player_order: [String.t()],
@@ -60,7 +60,6 @@ defmodule TetrisGame.GameRoom do
     - `:host` - player_id of the host (required)
     - `:name` - room display name (required)
     - `:max_players` - maximum number of players (required)
-    - `:password` - optional room password
   """
   def start_link(opts) do
     room_id = Keyword.fetch!(opts, :room_id)
@@ -131,14 +130,12 @@ defmodule TetrisGame.GameRoom do
     host = Keyword.fetch!(opts, :host)
     name = Keyword.fetch!(opts, :name)
     max_players = Keyword.fetch!(opts, :max_players)
-    password = Keyword.get(opts, :password)
 
     state = %__MODULE__{
       room_id: room_id,
       host: host,
       name: name,
       max_players: max_players,
-      password: password,
       status: :waiting,
       players: %{},
       player_order: [],
@@ -157,7 +154,7 @@ defmodule TetrisGame.GameRoom do
         {:reply, {:error, :game_in_progress}, state}
 
       Map.has_key?(state.players, player_id) ->
-        {:reply, {:error, :already_joined}, state}
+        {:reply, :ok, state}
 
       map_size(state.players) >= state.max_players ->
         {:reply, {:error, :room_full}, state}
@@ -171,6 +168,12 @@ defmodule TetrisGame.GameRoom do
             player_order: state.player_order ++ [player_id]
         }
 
+        Lobby.update_room(
+          state.room_id,
+          %{player_count: map_size(new_state.players)}
+        )
+
+        broadcast_state(new_state)
         {:reply, :ok, new_state}
     end
   end
@@ -201,6 +204,7 @@ defmodule TetrisGame.GameRoom do
       room_empty = map_size(new_players) == 0 and is_host
 
       if room_empty do
+        Lobby.update_room(state.room_id, %{player_count: 0})
         {:stop, :normal, :ok, state}
       else
         new_host =
@@ -223,6 +227,12 @@ defmodule TetrisGame.GameRoom do
             host: new_host
         }
 
+        Lobby.update_room(
+          state.room_id,
+          %{player_count: map_size(new_players)}
+        )
+
+        broadcast_state(new_state)
         {:reply, :ok, new_state}
       end
     end
@@ -240,8 +250,18 @@ defmodule TetrisGame.GameRoom do
         {:reply, {:error, :not_enough_players}, state}
 
       true ->
-        # Initialize player states with game boards and set default targets
-        players_with_targets = set_default_targets(state.players, state.player_order)
+        players_with_targets =
+          set_default_targets(state.players, state.player_order)
+
+        target_summary =
+          Map.new(players_with_targets, fn {_pid, p} ->
+            {p.nickname, players_with_targets[p.target].nickname}
+          end)
+
+        Logger.debug(
+          "[Game] started room=#{state.room_id} " <>
+            "targets=#{inspect(target_summary)}"
+        )
 
         timer_ref = schedule_tick()
 
@@ -323,12 +343,32 @@ defmodule TetrisGame.GameRoom do
     # 4. Combine all garbage events
     all_garbage_events = garbage_events_from_input ++ garbage_events_from_gravity
 
+    if all_garbage_events != [] do
+      Logger.debug(
+        "[Garbage] events=#{inspect(all_garbage_events)}"
+      )
+    end
+
     # 5. Distribute garbage
     players_after_garbage = distribute_garbage(players_after_gravity, all_garbage_events)
 
+    if all_garbage_events != [] do
+      pending_summary =
+        Map.new(players_after_garbage, fn {pid, p} ->
+          {pid, length(p.pending_garbage)}
+        end)
+
+      Logger.debug(
+        "[Garbage] pending after distribute: #{inspect(pending_summary)}"
+      )
+    end
+
+    # 5b. Apply pending garbage immediately
+    players_after_apply = apply_all_pending_garbage(players_after_garbage, state.player_order)
+
     # 6. Check eliminations
     {players_final, new_eliminations} =
-      check_eliminations(players_after_garbage, state.players, state.player_order)
+      check_eliminations(players_after_apply, state.players, state.player_order)
 
     eliminated_order = state.eliminated_order ++ new_eliminations
 
@@ -466,8 +506,15 @@ defmodule TetrisGame.GameRoom do
   defp collect_garbage_events(game_map, target) do
     lines_cleared = Map.get(game_map, :lines_cleared_this_lock, 0)
 
+    if lines_cleared > 0 do
+      Logger.debug(
+        "[Garbage] lock cleared #{lines_cleared} line(s), " <>
+          "target=#{inspect(target)}, " <>
+          "sends_garbage=#{lines_cleared >= 2}"
+      )
+    end
+
     if lines_cleared >= 2 and target != nil do
-      # Send (lines_cleared - 1) garbage rows to the target
       garbage_count = lines_cleared - 1
       [{target, garbage_count}]
     else
@@ -498,6 +545,29 @@ defmodule TetrisGame.GameRoom do
     end)
   end
 
+  # -- Immediate garbage application --
+
+  defp apply_all_pending_garbage(players, player_order) do
+    Enum.reduce(player_order, players, fn player_id, acc ->
+      player = acc[player_id]
+
+      if player.alive and player.pending_garbage != [] do
+        game_map = PlayerState.to_game_logic_map(player)
+
+        updated_map =
+          case GameLogic.apply_pending_garbage(game_map) do
+            {:ok, s} -> s
+            {:game_over, s} -> s
+          end
+
+        updated_player = PlayerState.from_game_logic_map(player, updated_map)
+        Map.put(acc, player_id, updated_player)
+      else
+        acc
+      end
+    end)
+  end
+
   # -- Elimination checking --
 
   defp check_eliminations(current_players, previous_players, player_order) do
@@ -513,19 +583,31 @@ defmodule TetrisGame.GameRoom do
 
   # -- Broadcasting --
 
-  defp broadcast_state(state) do
-    payload = %{
+  @doc """
+  Builds the broadcast payload map from a GameRoom state struct.
+  """
+  def build_broadcast_payload(state) do
+    %{
       tick: state.tick,
       status: state.status,
+      host: state.host,
       players:
         Map.new(state.players, fn {player_id, player} ->
           {player_id, PlayerState.to_broadcast(player)}
         end),
       eliminated_order: state.eliminated_order
     }
+  end
+
+  defp broadcast_state(state) do
+    payload = build_broadcast_payload(state)
 
     try do
-      TetrisWeb.Endpoint.broadcast("game:#{state.room_id}", "game_state", payload)
+      TetrisWeb.Endpoint.broadcast(
+        "game:#{state.room_id}",
+        "game_state",
+        payload
+      )
     rescue
       _ -> :ok
     end
@@ -545,6 +627,12 @@ defmodule TetrisGame.GameRoom do
       updated_player = %{player | target: target_id}
       Map.put(acc, player_id, updated_player)
     end)
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    Lobby.remove_room(state.room_id)
+    :ok
   end
 
   # -- Timer --

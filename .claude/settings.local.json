@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:hex.pm)",
+      "WebFetch(domain:registry.npmjs.org)",
+      "Bash(mix deps.get:*)",
+      "Bash(mix test:*)",
+      "Bash(trash:*)",
+      "Bash(mix compile:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__tidewave__project_eval",
+      "mcp__tidewave__get_logs"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7"
+  ],
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": false
+  }
+}

@@ -98,7 +98,8 @@ defmodule Tetris.PlayerState do
       level: state.level,
       alive: state.alive,
       next_piece: next_piece_type(state.next_piece),
-      target: state.target
+      target: state.target,
+      pending_garbage: length(state.pending_garbage)
     }
   end
 

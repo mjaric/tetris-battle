@@ -207,25 +207,13 @@ defmodule Tetris.GameLogic do
         gravity_threshold: new_threshold
     }
 
-    # 4. Apply pending garbage
-    state =
-      case apply_pending_garbage(state) do
-        {:ok, s} -> s
-        {:game_over, s} -> s
-      end
+    # 4. Spawn next piece (garbage is applied in the tick loop)
+    case spawn_piece(state) do
+      {:ok, spawned_state} ->
+        {:ok, :locked, Map.put(spawned_state, :lines_cleared_this_lock, lines_cleared)}
 
-    # If game over from garbage, return early
-    if not state.alive do
-      {:ok, :locked, Map.put(state, :lines_cleared_this_lock, lines_cleared)}
-    else
-      # 5. Spawn next piece
-      case spawn_piece(state) do
-        {:ok, spawned_state} ->
-          {:ok, :locked, Map.put(spawned_state, :lines_cleared_this_lock, lines_cleared)}
-
-        {:game_over, dead_state} ->
-          {:ok, :locked, Map.put(dead_state, :lines_cleared_this_lock, lines_cleared)}
-      end
+      {:game_over, dead_state} ->
+        {:ok, :locked, Map.put(dead_state, :lines_cleared_this_lock, lines_cleared)}
     end
   end
 end

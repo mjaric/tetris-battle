@@ -36,21 +36,6 @@ defmodule TetrisGame.GameRoomTest do
       assert is_pid(pid)
     end
 
-    test "accepts optional password" do
-      room_id = "password_room_#{:rand.uniform(100_000)}"
-
-      {:ok, pid} =
-        GameRoom.start_link(
-          room_id: room_id,
-          host: "host_1",
-          name: "Secret Room",
-          max_players: 4,
-          password: "secret"
-        )
-
-      state = GameRoom.get_state(pid)
-      assert state.password == "secret"
-    end
   end
 
   describe "join/3" do
@@ -76,9 +61,9 @@ defmodule TetrisGame.GameRoomTest do
       assert {:error, :room_full} = GameRoom.join(pid, "p5", "E")
     end
 
-    test "rejects duplicate join", %{pid: pid} do
+    test "idempotent join succeeds for already-joined player", %{pid: pid} do
       :ok = GameRoom.join(pid, "p1", "A")
-      assert {:error, :already_joined} = GameRoom.join(pid, "p1", "A")
+      assert :ok = GameRoom.join(pid, "p1", "A")
     end
 
     test "rejects join when game is in progress", %{pid: pid} do
@@ -279,6 +264,86 @@ defmodule TetrisGame.GameRoomTest do
 
       state = GameRoom.get_state(pid)
       assert state.status == :finished
+    end
+  end
+
+  describe "garbage pipeline" do
+    test "clearing 2+ lines distributes garbage to target", %{pid: pid} do
+      :ok = GameRoom.join(pid, "p1", "A")
+      :ok = GameRoom.join(pid, "p2", "B")
+      :ok = GameRoom.start_game(pid, "host_1")
+
+      # Set up p1's board: rows 18-19 full except columns 4-5
+      :sys.replace_state(pid, fn state ->
+        p1 = state.players["p1"]
+
+        board =
+          Enum.map(0..19, fn row_idx ->
+            if row_idx >= 18 do
+              Enum.map(0..9, fn col ->
+                if col in [4, 5], do: nil, else: "#ff0000"
+              end)
+            else
+              List.duplicate(nil, 10)
+            end
+          end)
+
+        o_piece = Tetris.Piece.new(:O)
+        p1 = %{p1 | board: board, current_piece: o_piece, position: {4, 0}}
+        %{state | players: Map.put(state.players, "p1", p1)}
+      end)
+
+      # Hard drop fills cols 4-5 in rows 18-19 → clears 2 lines
+      :ok = GameRoom.input(pid, "p1", "hard_drop")
+      Process.sleep(100)
+
+      state = GameRoom.get_state(pid)
+      p2 = state.players["p2"]
+
+      # p1 cleared 2 lines → sends 1 garbage row to p2
+      # p2 might have pending_garbage or it may already be applied
+      # (depends on whether p2's piece locked this tick)
+      has_pending = length(p2.pending_garbage) > 0
+
+      has_garbage_on_board =
+        Enum.any?(p2.board, fn row ->
+          Enum.any?(row, fn cell -> cell == "#808080" end)
+        end)
+
+      assert has_pending or has_garbage_on_board,
+        "p2 should have garbage (pending: #{length(p2.pending_garbage)}, on_board: #{has_garbage_on_board})"
+    end
+
+    test "pending garbage is applied when target's piece locks", %{pid: pid} do
+      :ok = GameRoom.join(pid, "p1", "A")
+      :ok = GameRoom.join(pid, "p2", "B")
+      :ok = GameRoom.start_game(pid, "host_1")
+
+      # Directly inject pending_garbage into p2
+      :sys.replace_state(pid, fn state ->
+        p2 = state.players["p2"]
+        garbage = [Tetris.Board.generate_garbage_row()]
+        p2 = %{p2 | pending_garbage: garbage}
+        %{state | players: Map.put(state.players, "p2", p2)}
+      end)
+
+      # Hard drop p2's piece to trigger lock_and_spawn
+      :ok = GameRoom.input(pid, "p2", "hard_drop")
+      Process.sleep(100)
+
+      state = GameRoom.get_state(pid)
+      p2 = state.players["p2"]
+
+      # Garbage should be applied (pending cleared, gray cells on board)
+      assert p2.pending_garbage == []
+
+      has_garbage_on_board =
+        Enum.any?(p2.board, fn row ->
+          Enum.any?(row, fn cell -> cell == "#808080" end)
+        end)
+
+      assert has_garbage_on_board,
+        "p2's board should have garbage rows after piece lock"
     end
   end
 

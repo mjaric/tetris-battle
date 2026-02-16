@@ -157,7 +157,6 @@ defmodule TetrisGame.LobbyTest do
           assert room_info.host == "player1"
           assert room_info.name == "My Room"
           assert room_info.max_players == 4
-          assert room_info.has_password == false
           assert room_info.player_count == 0
           assert room_info.status == :waiting
 
@@ -167,22 +166,5 @@ defmodule TetrisGame.LobbyTest do
       end
     end
 
-    test "creates a room with password" do
-      opts = %{
-        host: "player1",
-        name: "Secret Room",
-        max_players: 2,
-        password: "secret123"
-      }
-
-      case TetrisGame.Lobby.create_room(opts) do
-        {:ok, room_id} ->
-          assert {:ok, room_info} = TetrisGame.Lobby.get_room(room_id)
-          assert room_info.has_password == true
-
-        {:error, _reason} ->
-          :ok
-      end
-    end
   end
 end

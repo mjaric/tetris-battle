@@ -16,7 +16,6 @@ defmodule TetrisGame.Lobby do
     - `:host` - the player hosting the room (required)
     - `:name` - the room name (required)
     - `:max_players` - maximum number of players (required)
-    - `:password` - optional room password
   """
   def create_room(opts) do
     GenServer.call(__MODULE__, {:create_room, opts})
@@ -68,13 +67,6 @@ defmodule TetrisGame.Lobby do
       max_players: opts.max_players
     ]
 
-    room_opts =
-      if Map.has_key?(opts, :password) do
-        [{:password, opts.password} | room_opts]
-      else
-        room_opts
-      end
-
     try do
       case TetrisGame.RoomSupervisor.start_room(room_id, room_opts) do
         {:ok, _pid} ->
@@ -83,7 +75,6 @@ defmodule TetrisGame.Lobby do
             host: opts.host,
             name: opts.name,
             max_players: opts.max_players,
-            has_password: Map.has_key?(opts, :password) and opts.password != nil,
             player_count: 0,
             status: :waiting
           }
