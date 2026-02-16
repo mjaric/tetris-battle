@@ -66,6 +66,30 @@ defmodule TetrisWeb.GameChannel do
     end
   end
 
+  def handle_in("add_bot", %{"difficulty" => difficulty}, socket) do
+    room = GameRoom.via(socket.assigns.room_id)
+    diff_atom = String.to_existing_atom(difficulty)
+
+    case GameRoom.add_bot(room, diff_atom) do
+      {:ok, bot_id} -> {:reply, {:ok, %{bot_id: bot_id}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: to_string(reason)}}, socket}
+    end
+  catch
+    :exit, _ -> {:reply, {:error, %{reason: "room_not_found"}}, socket}
+    ArgumentError -> {:reply, {:error, %{reason: "invalid_difficulty"}}, socket}
+  end
+
+  def handle_in("remove_bot", %{"bot_id" => bot_id}, socket) do
+    room = GameRoom.via(socket.assigns.room_id)
+
+    case GameRoom.remove_bot(room, bot_id) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: to_string(reason)}}, socket}
+    end
+  catch
+    :exit, _ -> {:reply, {:error, %{reason: "room_not_found"}}, socket}
+  end
+
   def handle_in("ping", _payload, socket) do
     server_time = System.monotonic_time(:millisecond)
     {:reply, {:ok, %{server_time: server_time}}, socket}

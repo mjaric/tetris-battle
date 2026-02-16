@@ -57,6 +57,7 @@ export default function GameSession() {
       isHost={game.isHost}
       startGame={game.startGame}
       onLeave={handleLeave}
+      channel={channel}
     />
   );
 }

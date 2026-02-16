@@ -14,6 +14,8 @@ defmodule TetrisGame.GameRoom do
   alias Tetris.GameLogic
   alias Tetris.Board
   alias TetrisGame.Lobby
+  alias TetrisGame.BotNames
+  alias TetrisGame.BotSupervisor
 
   @tick_interval 50
 
@@ -27,7 +29,9 @@ defmodule TetrisGame.GameRoom do
     :player_order,
     :eliminated_order,
     :tick,
-    :tick_timer
+    :tick_timer,
+    :bot_ids,
+    :bot_pids
   ]
 
   @type t :: %__MODULE__{
@@ -40,7 +44,9 @@ defmodule TetrisGame.GameRoom do
           player_order: [String.t()],
           eliminated_order: [String.t()],
           tick: non_neg_integer(),
-          tick_timer: reference() | nil
+          tick_timer: reference() | nil,
+          bot_ids: MapSet.t(),
+          bot_pids: %{String.t() => pid()}
         }
 
   # -- Client API --
@@ -116,6 +122,22 @@ defmodule TetrisGame.GameRoom do
   end
 
   @doc """
+  Adds a bot player to the room. Only allowed in waiting state.
+
+  Returns `{:ok, bot_id}` or `{:error, reason}`.
+  """
+  def add_bot(room, difficulty) do
+    GenServer.call(room, {:add_bot, difficulty})
+  end
+
+  @doc """
+  Removes a bot player from the room. Only allowed in waiting state.
+  """
+  def remove_bot(room, bot_id) do
+    GenServer.call(room, {:remove_bot, bot_id})
+  end
+
+  @doc """
   Returns the full room state (for debugging/testing).
   """
   def get_state(room) do
@@ -141,7 +163,9 @@ defmodule TetrisGame.GameRoom do
       player_order: [],
       eliminated_order: [],
       tick: 0,
-      tick_timer: nil
+      tick_timer: nil,
+      bot_ids: MapSet.new(),
+      bot_pids: %{}
     }
 
     {:ok, state}
@@ -203,37 +227,45 @@ defmodule TetrisGame.GameRoom do
       # Room is empty if no players and host is leaving
       room_empty = map_size(new_players) == 0 and is_host
 
-      if room_empty do
-        Lobby.update_room(state.room_id, %{player_count: 0})
-        {:stop, :normal, :ok, state}
-      else
-        new_host =
-          if is_host and length(new_order) > 0 do
-            # Assign oldest remaining player as host
-            hd(new_order)
-          else
-            if is_host do
-              # Host leaving but no players in order (shouldn't happen)
-              state.host
+      remaining_humans =
+        Enum.filter(new_order, fn id ->
+          not MapSet.member?(state.bot_ids, id)
+        end)
+
+      all_bots = remaining_humans == [] and map_size(new_players) > 0
+
+      cond do
+        room_empty or all_bots ->
+          stop_all_bots(state)
+          Lobby.update_room(state.room_id, %{player_count: 0})
+          {:stop, :normal, :ok, state}
+
+        true ->
+          new_host =
+            if is_host and length(remaining_humans) > 0 do
+              hd(remaining_humans)
             else
-              state.host
+              if is_host do
+                state.host
+              else
+                state.host
+              end
             end
-          end
 
-        new_state = %{
-          state
-          | players: new_players,
-            player_order: new_order,
-            host: new_host
-        }
+          new_state = %{
+            state
+            | players: new_players,
+              player_order: new_order,
+              host: new_host
+          }
 
-        Lobby.update_room(
-          state.room_id,
-          %{player_count: map_size(new_players)}
-        )
+          Lobby.update_room(
+            state.room_id,
+            %{player_count: map_size(new_players)}
+          )
 
-        broadcast_state(new_state)
-        {:reply, :ok, new_state}
+          broadcast_state(new_state)
+          {:reply, :ok, new_state}
       end
     end
   end
@@ -272,6 +304,10 @@ defmodule TetrisGame.GameRoom do
             tick_timer: timer_ref
         }
 
+        Enum.each(state.bot_pids, fn {_, pid} ->
+          send(pid, :game_started)
+        end)
+
         {:reply, :ok, new_state}
     end
   end
@@ -289,6 +325,88 @@ defmodule TetrisGame.GameRoom do
         updated_player = %{player | target: target_id}
         new_players = Map.put(state.players, player_id, updated_player)
         {:reply, :ok, %{state | players: new_players}}
+    end
+  end
+
+  def handle_call({:add_bot, difficulty}, _from, state) do
+    cond do
+      state.status != :waiting ->
+        {:reply, {:error, :game_in_progress}, state}
+
+      map_size(state.players) >= state.max_players ->
+        {:reply, {:error, :room_full}, state}
+
+      true ->
+        bot_id = "bot-" <> Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
+        existing_names = Enum.map(state.players, fn {_, p} -> p.nickname end)
+        nickname = BotNames.pick(existing_names)
+
+        player = PlayerState.new(bot_id, nickname)
+
+        bot_opts = [
+          bot_id: bot_id,
+          nickname: nickname,
+          room_id: state.room_id,
+          difficulty: difficulty,
+          room_pid: self()
+        ]
+
+        case BotSupervisor.start_bot(bot_opts) do
+          {:ok, bot_pid} ->
+            Process.monitor(bot_pid)
+
+            new_state = %{
+              state
+              | players: Map.put(state.players, bot_id, player),
+                player_order: state.player_order ++ [bot_id],
+                bot_ids: MapSet.put(state.bot_ids, bot_id),
+                bot_pids: Map.put(state.bot_pids, bot_id, bot_pid)
+            }
+
+            Lobby.update_room(
+              state.room_id,
+              %{player_count: map_size(new_state.players)}
+            )
+
+            broadcast_state(new_state)
+            {:reply, {:ok, bot_id}, new_state}
+
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
+    end
+  end
+
+  def handle_call({:remove_bot, bot_id}, _from, state) do
+    cond do
+      state.status != :waiting ->
+        {:reply, {:error, :game_in_progress}, state}
+
+      not MapSet.member?(state.bot_ids, bot_id) ->
+        {:reply, {:error, :not_a_bot}, state}
+
+      true ->
+        bot_pid = state.bot_pids[bot_id]
+
+        if bot_pid do
+          BotSupervisor.stop_bot(bot_pid)
+        end
+
+        new_state = %{
+          state
+          | players: Map.delete(state.players, bot_id),
+            player_order: List.delete(state.player_order, bot_id),
+            bot_ids: MapSet.delete(state.bot_ids, bot_id),
+            bot_pids: Map.delete(state.bot_pids, bot_id)
+        }
+
+        Lobby.update_room(
+          state.room_id,
+          %{player_count: map_size(new_state.players)}
+        )
+
+        broadcast_state(new_state)
+        {:reply, :ok, new_state}
     end
   end
 
@@ -323,6 +441,32 @@ defmodule TetrisGame.GameRoom do
       {:noreply, %{state | tick_timer: timer_ref}}
     else
       {:noreply, %{state | tick_timer: nil}}
+    end
+  end
+
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    case Enum.find(state.bot_pids, fn {_, p} -> p == pid end) do
+      {bot_id, _} ->
+        Logger.debug("[Game] bot #{bot_id} process down, cleaning up")
+
+        new_state = %{
+          state
+          | players: Map.delete(state.players, bot_id),
+            player_order: List.delete(state.player_order, bot_id),
+            bot_ids: MapSet.delete(state.bot_ids, bot_id),
+            bot_pids: Map.delete(state.bot_pids, bot_id)
+        }
+
+        Lobby.update_room(
+          state.room_id,
+          %{player_count: map_size(new_state.players)}
+        )
+
+        broadcast_state(new_state)
+        {:noreply, new_state}
+
+      nil ->
+        {:noreply, state}
     end
   end
 
@@ -587,13 +731,17 @@ defmodule TetrisGame.GameRoom do
   Builds the broadcast payload map from a GameRoom state struct.
   """
   def build_broadcast_payload(state) do
+    bot_ids = state.bot_ids || MapSet.new()
+
     %{
       tick: state.tick,
       status: state.status,
       host: state.host,
       players:
         Map.new(state.players, fn {player_id, player} ->
-          {player_id, PlayerState.to_broadcast(player)}
+          broadcast = PlayerState.to_broadcast(player)
+          broadcast = Map.put(broadcast, :is_bot, MapSet.member?(bot_ids, player_id))
+          {player_id, broadcast}
         end),
       eliminated_order: state.eliminated_order
     }
@@ -611,6 +759,29 @@ defmodule TetrisGame.GameRoom do
     rescue
       _ -> :ok
     end
+
+    bot_payload = build_bot_state_payload(state)
+
+    Enum.each(state.bot_pids, fn {_, pid} ->
+      send(pid, {:game_state, bot_payload})
+    end)
+  end
+
+  defp build_bot_state_payload(state) do
+    %{
+      status: state.status,
+      players:
+        Map.new(state.players, fn {player_id, player} ->
+          %{
+            alive: player.alive,
+            score: player.score,
+            current_piece: player.current_piece,
+            position: player.position,
+            next_piece: player.next_piece
+          }
+          |> then(fn data -> {player_id, data} end)
+        end)
+    }
   end
 
   # -- Default targets --
@@ -631,8 +802,21 @@ defmodule TetrisGame.GameRoom do
 
   @impl true
   def terminate(_reason, state) do
+    stop_all_bots(state)
     Lobby.remove_room(state.room_id)
     :ok
+  end
+
+  # -- Bot cleanup --
+
+  defp stop_all_bots(state) do
+    Enum.each(state.bot_pids, fn {_, pid} ->
+      try do
+        BotSupervisor.stop_bot(pid)
+      catch
+        _, _ -> :ok
+      end
+    end)
   end
 
   # -- Timer --

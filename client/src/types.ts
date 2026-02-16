@@ -8,6 +8,7 @@ export interface PlayerBroadcast {
   next_piece: string | null;
   target: string | null;
   pending_garbage: number;
+  is_bot?: boolean;
 }
 
 export interface GameState {

@@ -8,6 +8,7 @@ defmodule Tetris.Application do
       {Phoenix.PubSub, name: Tetris.PubSub},
       {Registry, keys: :unique, name: TetrisGame.RoomRegistry},
       TetrisGame.RoomSupervisor,
+      TetrisGame.BotSupervisor,
       TetrisGame.Lobby,
       TetrisWeb.Endpoint
     ]
