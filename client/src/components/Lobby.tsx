@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
-import { useGameContext } from "../context/GameContext.tsx";
-import type { RoomInfo } from "../types.ts";
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
+import { useGameContext } from '../context/GameContext.tsx';
+import type { RoomInfo } from '../types.ts';
 
 interface NewRoom {
   name: string;
@@ -13,7 +13,7 @@ export default function Lobby() {
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newRoom, setNewRoom] = useState<NewRoom>({
-    name: "",
+    name: '',
     max_players: 4,
   });
   const [error, setError] = useState<string | null>(null);
@@ -21,28 +21,20 @@ export default function Lobby() {
 
   const refreshRooms = useCallback(() => {
     if (!lobbyChannel) return;
-    lobbyChannel
-      .push("list_rooms", {})
-      .receive("ok", (resp: { rooms: RoomInfo[] }) => {
-        setRooms(resp.rooms);
-      });
+    lobbyChannel.push('list_rooms', {}).receive('ok', (resp: { rooms: RoomInfo[] }) => {
+      setRooms(resp.rooms);
+    });
   }, [lobbyChannel]);
 
   useEffect(() => {
     refreshRooms();
     if (!lobbyChannel) return;
 
-    const ref1 = lobbyChannel.on(
-      "room_created",
-      () => refreshRooms(),
-    );
-    const ref2 = lobbyChannel.on(
-      "room_removed",
-      () => refreshRooms(),
-    );
+    const ref1 = lobbyChannel.on('room_created', () => refreshRooms());
+    const ref2 = lobbyChannel.on('room_removed', () => refreshRooms());
     return () => {
-      lobbyChannel.off("room_created", ref1);
-      lobbyChannel.off("room_removed", ref2);
+      lobbyChannel.off('room_created', ref1);
+      lobbyChannel.off('room_removed', ref2);
     };
   }, [lobbyChannel, refreshRooms]);
 
@@ -50,15 +42,15 @@ export default function Lobby() {
     if (!lobbyChannel) return;
     setError(null);
     lobbyChannel
-      .push("create_room", {
-        name: newRoom.name || "Unnamed Room",
+      .push('create_room', {
+        name: newRoom.name || 'Unnamed Room',
         max_players: newRoom.max_players,
       })
-      .receive("ok", (resp: { room_id: string }) => {
+      .receive('ok', (resp: { room_id: string }) => {
         setShowCreate(false);
         navigate(`/room/${resp.room_id}`);
       })
-      .receive("error", (resp: { reason: string }) => {
+      .receive('error', (resp: { reason: string }) => {
         setError(resp.reason);
       });
   }
@@ -79,25 +71,21 @@ export default function Lobby() {
           Create Room
         </button>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate('/')}
           className="cursor-pointer rounded-lg border-none bg-border px-6 py-2.5 text-sm font-bold text-white"
         >
           Back
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 text-sm text-red">{error}</div>
-      )}
+      {error && <div className="mb-4 text-sm text-red">{error}</div>}
 
       {showCreate && (
         <div className="mb-6 rounded-lg border border-border bg-bg-secondary p-5">
           <input
             placeholder="Room name"
             value={newRoom.name}
-            onChange={(e) =>
-              setNewRoom({ ...newRoom, name: e.target.value })
-            }
+            onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
             className="block w-full rounded-md border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-white outline-none"
           />
           <select
@@ -124,11 +112,7 @@ export default function Lobby() {
       )}
 
       <div className="w-full max-w-lg">
-        {rooms.length === 0 && (
-          <div className="text-center text-gray-600">
-            No rooms yet
-          </div>
-        )}
+        {rooms.length === 0 && <div className="text-center text-gray-600">No rooms yet</div>}
         {rooms.map((room) => (
           <div
             key={room.room_id}

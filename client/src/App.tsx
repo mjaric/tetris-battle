@@ -1,11 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router";
-import { GameProvider, useGameContext } from "./context/GameContext.tsx";
-import MainMenu from "./components/MainMenu.tsx";
-import SoloGame from "./components/SoloGame.tsx";
-import NicknameForm from "./components/NicknameForm.tsx";
-import Lobby from "./components/Lobby.tsx";
-import GameSession from "./components/GameSession.tsx";
-import type { ReactNode } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { GameProvider, useGameContext } from './context/GameContext.tsx';
+import MainMenu from './components/MainMenu.tsx';
+import SoloGame from './components/SoloGame.tsx';
+import NicknameForm from './components/NicknameForm.tsx';
+import Lobby from './components/Lobby.tsx';
+import GameSession from './components/GameSession.tsx';
+import type { ReactNode } from 'react';
 
 function RequireNickname({ children }: { children: ReactNode }) {
   const { nickname } = useGameContext();

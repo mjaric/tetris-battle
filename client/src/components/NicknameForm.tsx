@@ -1,12 +1,12 @@
-import { useState, useEffect, type FormEvent } from "react";
-import { useNavigate } from "react-router";
-import { useGameContext } from "../context/GameContext.tsx";
+import { useState, useEffect, type FormEvent } from 'react';
+import { useNavigate } from 'react-router';
+import { useGameContext } from '../context/GameContext.tsx';
 
-const STORAGE_KEY = "tetris_nickname";
+const STORAGE_KEY = 'tetris_nickname';
 const VALID_PATTERN = /^[a-zA-Z0-9_]+$/;
 
 export default function NicknameForm() {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const navigate = useNavigate();
   const { setNickname } = useGameContext();
 
@@ -16,26 +16,20 @@ export default function NicknameForm() {
   }, []);
 
   const trimmed = input.trim();
-  const valid =
-    trimmed.length >= 3 &&
-    trimmed.length <= 16 &&
-    VALID_PATTERN.test(trimmed);
+  const valid = trimmed.length >= 3 && trimmed.length <= 16 && VALID_PATTERN.test(trimmed);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!valid) return;
     localStorage.setItem(STORAGE_KEY, trimmed);
     setNickname(trimmed);
-    navigate("/lobby");
+    navigate('/lobby');
   }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
       <h2 className="mb-6 text-lg text-gray-400">Enter Nickname</h2>
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col items-center"
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col items-center">
         <input
           type="text"
           value={input}
@@ -48,7 +42,7 @@ export default function NicknameForm() {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate('/')}
             className="cursor-pointer rounded-lg border-none bg-border px-6 py-3 text-sm text-gray-400"
           >
             Back
@@ -57,9 +51,7 @@ export default function NicknameForm() {
             type="submit"
             disabled={!valid}
             className={`rounded-lg border-none px-8 py-3 text-base font-bold text-white ${
-              valid
-                ? "cursor-pointer bg-accent"
-                : "cursor-default bg-gray-700"
+              valid ? 'cursor-pointer bg-accent' : 'cursor-default bg-gray-700'
             }`}
           >
             Enter Lobby

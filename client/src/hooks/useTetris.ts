@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -9,7 +9,7 @@ import {
   LINES_PER_LEVEL,
   POINTS,
   WALL_KICKS,
-} from "../constants.ts";
+} from '../constants.ts';
 
 type Cell = string | null;
 type Board = Cell[][];
@@ -40,33 +40,21 @@ interface UseTetrisResult {
 }
 
 function createEmptyBoard(): Board {
-  return Array.from(
-    { length: BOARD_HEIGHT },
-    () => Array<Cell>(BOARD_WIDTH).fill(null),
-  );
+  return Array.from({ length: BOARD_HEIGHT }, () => Array<Cell>(BOARD_WIDTH).fill(null));
 }
 
 function randomTetromino(): Piece {
-  const key =
-    TETROMINO_KEYS[
-      Math.floor(Math.random() * TETROMINO_KEYS.length)
-    ]!;
+  const key = TETROMINO_KEYS[Math.floor(Math.random() * TETROMINO_KEYS.length)]!;
   const def = TETROMINOES[key]!;
   return { type: key, shape: def.shape, color: def.color, rotation: 0 };
 }
 
 function rotateMatrix(matrix: number[][]): number[][] {
   const n = matrix.length;
-  return matrix.map((row, i) =>
-    row.map((_, j) => matrix[n - 1 - j]![i]!),
-  );
+  return matrix.map((row, i) => row.map((_, j) => matrix[n - 1 - j]![i]!));
 }
 
-function isValidPosition(
-  board: Board,
-  shape: number[][],
-  pos: Position,
-): boolean {
+function isValidPosition(board: Board, shape: number[][], pos: Position): boolean {
   for (let y = 0; y < shape.length; y++) {
     const row = shape[y]!;
     for (let x = 0; x < row.length; x++) {
@@ -91,12 +79,7 @@ function placePiece(board: Board, piece: Piece, pos: Position): Board {
       if (cell) {
         const boardY = pos.y + y;
         const boardX = pos.x + x;
-        if (
-          boardY >= 0 &&
-          boardY < BOARD_HEIGHT &&
-          boardX >= 0 &&
-          boardX < BOARD_WIDTH
-        ) {
+        if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
           newBoard[boardY]![boardX] = piece.color;
         }
       }
@@ -108,22 +91,13 @@ function placePiece(board: Board, piece: Piece, pos: Position): Board {
 function clearLines(board: Board): { board: Board; linesCleared: number } {
   const kept = board.filter((row) => row.some((cell) => cell === null));
   const cleared = BOARD_HEIGHT - kept.length;
-  const emptyRows = Array.from(
-    { length: cleared },
-    () => Array<Cell>(BOARD_WIDTH).fill(null),
-  );
+  const emptyRows = Array.from({ length: cleared }, () => Array<Cell>(BOARD_WIDTH).fill(null));
   return { board: [...emptyRows, ...kept], linesCleared: cleared };
 }
 
-function getGhostPosition(
-  board: Board,
-  piece: Piece,
-  pos: Position,
-): Position {
+function getGhostPosition(board: Board, piece: Piece, pos: Position): Position {
   let ghostY = pos.y;
-  while (
-    isValidPosition(board, piece.shape, { x: pos.x, y: ghostY + 1 })
-  ) {
+  while (isValidPosition(board, piece.shape, { x: pos.x, y: ghostY + 1 })) {
     ghostY++;
   }
   return { x: pos.x, y: ghostY };
@@ -157,9 +131,7 @@ export function useTetris(): UseTetrisResult {
   levelRef.current = level;
 
   const spawnPiece = useCallback((piece: Piece) => {
-    const startX = Math.floor(
-      (BOARD_WIDTH - piece.shape[0]!.length) / 2,
-    );
+    const startX = Math.floor((BOARD_WIDTH - piece.shape[0]!.length) / 2);
     const startY = -1;
 
     if (
@@ -193,8 +165,7 @@ export function useTetris(): UseTetrisResult {
         setLevel(newLevel);
         return newLines;
       });
-      const pointValue =
-        POINTS[linesCleared as keyof typeof POINTS] ?? 0;
+      const pointValue = POINTS[linesCleared as keyof typeof POINTS] ?? 0;
       setScore((prev) => prev + pointValue * levelRef.current);
     }
 
@@ -204,24 +175,14 @@ export function useTetris(): UseTetrisResult {
   }, [nextPiece, spawnPiece]);
 
   const moveDown = useCallback(() => {
-    if (
-      gameOverRef.current ||
-      isPausedRef.current ||
-      !currentPieceRef.current
-    ) {
+    if (gameOverRef.current || isPausedRef.current || !currentPieceRef.current) {
       return;
     }
     const newPos = {
       x: currentPosRef.current.x,
       y: currentPosRef.current.y + 1,
     };
-    if (
-      isValidPosition(
-        boardRef.current,
-        currentPieceRef.current.shape,
-        newPos,
-      )
-    ) {
+    if (isValidPosition(boardRef.current, currentPieceRef.current.shape, newPos)) {
       setCurrentPos(newPos);
     } else {
       lockPiece();
@@ -229,67 +190,41 @@ export function useTetris(): UseTetrisResult {
   }, [lockPiece]);
 
   const moveLeft = useCallback(() => {
-    if (
-      gameOverRef.current ||
-      isPausedRef.current ||
-      !currentPieceRef.current
-    ) {
+    if (gameOverRef.current || isPausedRef.current || !currentPieceRef.current) {
       return;
     }
     const newPos = {
       x: currentPosRef.current.x - 1,
       y: currentPosRef.current.y,
     };
-    if (
-      isValidPosition(
-        boardRef.current,
-        currentPieceRef.current.shape,
-        newPos,
-      )
-    ) {
+    if (isValidPosition(boardRef.current, currentPieceRef.current.shape, newPos)) {
       setCurrentPos(newPos);
     }
   }, []);
 
   const moveRight = useCallback(() => {
-    if (
-      gameOverRef.current ||
-      isPausedRef.current ||
-      !currentPieceRef.current
-    ) {
+    if (gameOverRef.current || isPausedRef.current || !currentPieceRef.current) {
       return;
     }
     const newPos = {
       x: currentPosRef.current.x + 1,
       y: currentPosRef.current.y,
     };
-    if (
-      isValidPosition(
-        boardRef.current,
-        currentPieceRef.current.shape,
-        newPos,
-      )
-    ) {
+    if (isValidPosition(boardRef.current, currentPieceRef.current.shape, newPos)) {
       setCurrentPos(newPos);
     }
   }, []);
 
   const rotatePiece = useCallback(() => {
-    if (
-      gameOverRef.current ||
-      isPausedRef.current ||
-      !currentPieceRef.current
-    ) {
+    if (gameOverRef.current || isPausedRef.current || !currentPieceRef.current) {
       return;
     }
     const piece = currentPieceRef.current;
     const pos = currentPosRef.current;
     const rotated = rotateMatrix(piece.shape);
     const newRotation = (piece.rotation + 1) % 4;
-    const kickKey =
-      `${String(piece.rotation)}>${String(newRotation)}`;
-    const kicks =
-      piece.type === "I" ? WALL_KICKS.I : WALL_KICKS.normal;
+    const kickKey = `${String(piece.rotation)}>${String(newRotation)}`;
+    const kicks = piece.type === 'I' ? WALL_KICKS.I : WALL_KICKS.normal;
     const kickTests = kicks[kickKey] ?? [[0, 0]];
 
     for (const kick of kickTests) {
@@ -308,18 +243,10 @@ export function useTetris(): UseTetrisResult {
   }, []);
 
   const hardDrop = useCallback(() => {
-    if (
-      gameOverRef.current ||
-      isPausedRef.current ||
-      !currentPieceRef.current
-    ) {
+    if (gameOverRef.current || isPausedRef.current || !currentPieceRef.current) {
       return;
     }
-    const ghost = getGhostPosition(
-      boardRef.current,
-      currentPieceRef.current,
-      currentPosRef.current,
-    );
+    const ghost = getGhostPosition(boardRef.current, currentPieceRef.current, currentPosRef.current);
     const dropDistance = ghost.y - currentPosRef.current.y;
     setScore((prev) => prev + dropDistance * 2);
     setCurrentPos(ghost);
@@ -354,10 +281,7 @@ export function useTetris(): UseTetrisResult {
       return;
     }
 
-    const speed = Math.max(
-      100,
-      TICK_SPEED_MS - (level - 1) * SPEED_INCREMENT,
-    );
+    const speed = Math.max(100, TICK_SPEED_MS - (level - 1) * SPEED_INCREMENT);
     tickRef.current = setInterval(moveDown, speed);
 
     return () => {
@@ -370,44 +294,36 @@ export function useTetris(): UseTetrisResult {
       if (!gameStarted) return;
 
       switch (e.key) {
-        case "ArrowLeft":
+        case 'ArrowLeft':
           e.preventDefault();
           moveLeft();
           break;
-        case "ArrowRight":
+        case 'ArrowRight':
           e.preventDefault();
           moveRight();
           break;
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           moveDown();
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           rotatePiece();
           break;
-        case " ":
+        case ' ':
           e.preventDefault();
           hardDrop();
           break;
-        case "p":
-        case "P":
+        case 'p':
+        case 'P':
           togglePause();
           break;
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    gameStarted,
-    moveLeft,
-    moveRight,
-    moveDown,
-    rotatePiece,
-    hardDrop,
-    togglePause,
-  ]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameStarted, moveLeft, moveRight, moveDown, rotatePiece, hardDrop, togglePause]);
 
   const displayBoard: Board = board.map((row) => [...row]);
 
@@ -418,15 +334,9 @@ export function useTetris(): UseTetrisResult {
         if (cell) {
           const boardY = ghostPos.y + y;
           const boardX = ghostPos.x + x;
-          if (
-            boardY >= 0 &&
-            boardY < BOARD_HEIGHT &&
-            boardX >= 0 &&
-            boardX < BOARD_WIDTH
-          ) {
+          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
             if (!displayBoard[boardY]![boardX]) {
-              displayBoard[boardY]![boardX] =
-                `ghost:${currentPiece.color}`;
+              displayBoard[boardY]![boardX] = `ghost:${currentPiece.color}`;
             }
           }
         }
@@ -438,12 +348,7 @@ export function useTetris(): UseTetrisResult {
         if (cell) {
           const boardY = currentPos.y + y;
           const boardX = currentPos.x + x;
-          if (
-            boardY >= 0 &&
-            boardY < BOARD_HEIGHT &&
-            boardX >= 0 &&
-            boardX < BOARD_WIDTH
-          ) {
+          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
             displayBoard[boardY]![boardX] = currentPiece.color;
           }
         }

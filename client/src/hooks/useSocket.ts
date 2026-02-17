@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import { Socket, type Channel } from "phoenix";
+import { useState, useEffect, useRef } from 'react';
+import { Socket, type Channel } from 'phoenix';
 
-const SOCKET_URL =
-  import.meta.env["VITE_SOCKET_URL"] ?? "ws://localhost:4000/socket";
+const SOCKET_URL = import.meta.env['VITE_SOCKET_URL'] ?? 'ws://localhost:4000/socket';
 
 interface UseSocketResult {
   socket: Socket | null;
@@ -11,14 +10,11 @@ interface UseSocketResult {
   lobbyChannel: Channel | null;
 }
 
-export function useSocket(
-  nickname: string | null,
-): UseSocketResult {
+export function useSocket(nickname: string | null): UseSocketResult {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [lobbyChannel, setLobbyChannel] =
-    useState<Channel | null>(null);
+  const [lobbyChannel, setLobbyChannel] = useState<Channel | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const lobbyRef = useRef<Channel | null>(null);
 
@@ -32,12 +28,10 @@ export function useSocket(
     socketRef.current = s;
     setSocket(s);
 
-    const lobby = s.channel("lobby:main", {});
-    lobby
-      .join()
-      .receive("ok", (resp: { player_id: string }) => {
-        setPlayerId(resp.player_id);
-      });
+    const lobby = s.channel('lobby:main', {});
+    lobby.join().receive('ok', (resp: { player_id: string }) => {
+      setPlayerId(resp.player_id);
+    });
     lobbyRef.current = lobby;
     setLobbyChannel(lobby);
 

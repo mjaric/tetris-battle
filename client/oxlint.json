@@ -1,0 +1,9 @@
+{
+  "plugins": ["react", "react-hooks", "typescript"],
+  "rules": {
+    "max-lines-per-function": ["error", { "max": 100, "skipComments": true, "skipBlankLines": true }],
+    "no-unused-vars": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}

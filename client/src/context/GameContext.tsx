@@ -1,12 +1,6 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  type ReactNode,
-} from "react";
-import type { Socket, Channel } from "phoenix";
-import { useSocket } from "../hooks/useSocket.ts";
+import { createContext, useContext, useState, useMemo, type ReactNode } from 'react';
+import type { Socket, Channel } from 'phoenix';
+import { useSocket } from '../hooks/useSocket.ts';
 
 interface GameContextValue {
   nickname: string | null;
@@ -19,12 +13,9 @@ interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
-export function GameProvider(
-  { children }: { children: ReactNode },
-) {
+export function GameProvider({ children }: { children: ReactNode }) {
   const [nickname, setNickname] = useState<string | null>(null);
-  const { socket, connected, playerId, lobbyChannel } =
-    useSocket(nickname);
+  const { socket, connected, playerId, lobbyChannel } = useSocket(nickname);
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -35,22 +26,16 @@ export function GameProvider(
       playerId,
       lobbyChannel,
     }),
-    [nickname, socket, connected, playerId, lobbyChannel],
+    [nickname, socket, connected, playerId, lobbyChannel]
   );
 
-  return (
-    <GameContext.Provider value={value}>
-      {children}
-    </GameContext.Provider>
-  );
+  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
 export function useGameContext(): GameContextValue {
   const ctx = useContext(GameContext);
   if (!ctx) {
-    throw new Error(
-      "useGameContext must be used within GameProvider",
-    );
+    throw new Error('useGameContext must be used within GameProvider');
   }
   return ctx;
 }

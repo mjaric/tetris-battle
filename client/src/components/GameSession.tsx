@@ -1,23 +1,18 @@
-import { useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
-import { useGameContext } from "../context/GameContext.tsx";
-import { useChannel } from "../hooks/useChannel.ts";
-import {
-  useMultiplayerGame,
-} from "../hooks/useMultiplayerGame.ts";
-import { useLatency } from "../hooks/useLatency.ts";
-import WaitingRoom from "./WaitingRoom.tsx";
-import MultiBoard from "./MultiBoard.tsx";
-import Results from "./Results.tsx";
+import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router';
+import { useGameContext } from '../context/GameContext.tsx';
+import { useChannel } from '../hooks/useChannel.ts';
+import { useMultiplayerGame } from '../hooks/useMultiplayerGame.ts';
+import { useLatency } from '../hooks/useLatency.ts';
+import WaitingRoom from './WaitingRoom.tsx';
+import MultiBoard from './MultiBoard.tsx';
+import Results from './Results.tsx';
 
 export default function GameSession() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { socket, playerId } = useGameContext();
-  const { channel, join, leave } = useChannel(
-    socket,
-    roomId ? `game:${roomId}` : null,
-  );
+  const { channel, join, leave } = useChannel(socket, roomId ? `game:${roomId}` : null);
   const game = useMultiplayerGame(channel, playerId);
   const latency = useLatency(channel);
 
@@ -29,26 +24,15 @@ export default function GameSession() {
 
   function handleLeave() {
     leave();
-    navigate("/lobby");
+    navigate('/lobby');
   }
 
-  if (game.status === "finished") {
-    return (
-      <Results
-        gameState={game.gameState}
-        onBack={handleLeave}
-      />
-    );
+  if (game.status === 'finished') {
+    return <Results gameState={game.gameState} onBack={handleLeave} />;
   }
 
-  if (game.status === "playing" && game.gameState && playerId) {
-    return (
-      <MultiBoard
-        gameState={game.gameState}
-        myPlayerId={playerId}
-        latency={latency}
-      />
-    );
+  if (game.status === 'playing' && game.gameState && playerId) {
+    return <MultiBoard gameState={game.gameState} myPlayerId={playerId} latency={latency} />;
   }
 
   return (
