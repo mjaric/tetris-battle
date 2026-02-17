@@ -1,7 +1,8 @@
 defmodule TetrisWeb.LobbyChannel do
+  @moduledoc false
   use TetrisWeb, :channel
-  alias TetrisGame.Lobby
   alias TetrisGame.GameRoom
+  alias TetrisGame.Lobby
 
   @impl true
   def join("lobby:main", _payload, socket) do

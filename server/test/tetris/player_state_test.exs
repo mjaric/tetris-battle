@@ -1,9 +1,9 @@
 defmodule Tetris.PlayerStateTest do
   use ExUnit.Case, async: true
 
-  alias Tetris.PlayerState
   alias Tetris.Board
   alias Tetris.Piece
+  alias Tetris.PlayerState
 
   describe "new/2" do
     test "creates a valid state with correct defaults" do

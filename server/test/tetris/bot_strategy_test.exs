@@ -62,7 +62,7 @@ defmodule Tetris.BotStrategyTest do
       piece = Piece.new(:T)
       placements = BotStrategy.enumerate_placements(board, piece)
 
-      assert length(placements) > 0
+      assert placements != []
 
       Enum.each(placements, fn pl ->
         assert Map.has_key?(pl, :rotation_count)

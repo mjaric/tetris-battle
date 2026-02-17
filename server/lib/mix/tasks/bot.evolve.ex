@@ -66,42 +66,50 @@ defmodule Mix.Tasks.Bot.Evolve do
   def run(args) do
     Mix.Task.run("compile")
 
-    {opts, _, _} =
-      OptionParser.parse(args, switches: @switches, aliases: @aliases)
+    {opts, _, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 
     setup_cluster(opts)
 
-    defaults = Evolution.default_config()
-    priv_dir = :code.priv_dir(:tetris) |> to_string()
-
     nodes = Cluster.available_nodes()
-    default_concurrency = defaults.max_concurrency * length(nodes)
+    config = build_config(opts, nodes)
+    priv_dir = :code.priv_dir(:tetris) |> to_string()
+    output_path = opts[:output] || Path.join(priv_dir, "bot_weights.json")
+    log_path = opts[:log] || Path.join(priv_dir, "bot_evolution_log.csv")
 
-    config = %{
-      population_size: opts[:population] || defaults.population_size,
-      generations: opts[:generations] || defaults.generations,
-      games_per_genome: opts[:games] || defaults.games_per_genome,
-      tournament_size: opts[:tournament] || defaults.tournament_size,
-      crossover_rate: opts[:crossover_rate] || defaults.crossover_rate,
-      mutation_rate: opts[:mutation_rate] || defaults.mutation_rate,
-      mutation_sigma: opts[:mutation_sigma] || defaults.mutation_sigma,
-      elitism_count: opts[:elitism] || defaults.elitism_count,
-      immigrant_count: opts[:immigrants] || defaults.immigrant_count,
-      max_concurrency: opts[:concurrency] || default_concurrency
-    }
-
-    output_path =
-      opts[:output] || Path.join(priv_dir, "bot_weights.json")
-
-    log_path =
-      opts[:log] || Path.join(priv_dir, "bot_evolution_log.csv")
-
-    total_games =
-      config.population_size * config.games_per_genome *
-        config.generations
-
+    total_games = config.population_size * config.games_per_genome * config.generations
     print_header(config, total_games, nodes)
     init_csv(log_path)
+
+    {best, all_stats} = run_evolution(config, log_path)
+
+    best_fitness = extract_best_fitness(all_stats)
+    save_json(output_path, best, best_fitness, config)
+    print_chart(all_stats)
+    print_summary(best, best_fitness, output_path, log_path)
+  end
+
+  defp build_config(opts, nodes) do
+    defaults = Evolution.default_config()
+    default_concurrency = defaults.max_concurrency * length(nodes)
+    base = merge_defaults(opts, defaults)
+    Map.put(base, :max_concurrency, opts[:concurrency] || default_concurrency)
+  end
+
+  defp merge_defaults(opts, defaults) do
+    %{
+      population_size: Keyword.get(opts, :population, defaults.population_size),
+      generations: Keyword.get(opts, :generations, defaults.generations),
+      games_per_genome: Keyword.get(opts, :games, defaults.games_per_genome),
+      tournament_size: Keyword.get(opts, :tournament, defaults.tournament_size),
+      crossover_rate: Keyword.get(opts, :crossover_rate, defaults.crossover_rate),
+      mutation_rate: Keyword.get(opts, :mutation_rate, defaults.mutation_rate),
+      mutation_sigma: Keyword.get(opts, :mutation_sigma, defaults.mutation_sigma),
+      elitism_count: Keyword.get(opts, :elitism, defaults.elitism_count),
+      immigrant_count: Keyword.get(opts, :immigrants, defaults.immigrant_count)
+    }
+  end
+
+  defp run_evolution(config, log_path) do
     history = :ets.new(:evolution_history, [:ordered_set, :public])
 
     best =
@@ -111,21 +119,15 @@ defmodule Mix.Tasks.Bot.Evolve do
         :ets.insert(history, {stats.generation, stats})
       end)
 
-    all_stats =
-      :ets.tab2list(history)
-      |> Enum.map(fn {_, s} -> s end)
-
+    all_stats = history |> :ets.tab2list() |> Enum.map(fn {_, s} -> s end)
     :ets.delete(history)
+    {best, all_stats}
+  end
 
-    best_fitness =
-      case all_stats do
-        [] -> 0.0
-        stats -> Enum.max_by(stats, & &1.best_fitness).best_fitness
-      end
+  defp extract_best_fitness([]), do: 0.0
 
-    save_json(output_path, best, best_fitness, config)
-    print_chart(all_stats)
-    print_summary(best, best_fitness, output_path, log_path)
+  defp extract_best_fitness(stats) do
+    Enum.max_by(stats, & &1.best_fitness).best_fitness
   end
 
   defp setup_cluster(opts) do
@@ -183,26 +185,23 @@ defmodule Mix.Tasks.Bot.Evolve do
 
   defp local_lan_ip do
     with {:ok, ifaddrs} <- :inet.getifaddrs() do
-      result =
-        ifaddrs
-        |> Enum.flat_map(fn {_name, opts} ->
-          flags = Keyword.get(opts, :flags, [])
-
-          if :up in flags and :running in flags and
-               :loopback not in flags do
-            opts
-            |> Keyword.get_values(:addr)
-            |> Enum.filter(&(tuple_size(&1) == 4))
-          else
-            []
-          end
-        end)
-        |> List.first()
-
-      case result do
+      ifaddrs
+      |> Enum.flat_map(&ipv4_addrs_from_iface/1)
+      |> List.first()
+      |> case do
         nil -> :error
         ip -> {:ok, ip |> :inet.ntoa() |> to_string()}
       end
+    end
+  end
+
+  defp ipv4_addrs_from_iface({_name, opts}) do
+    flags = Keyword.get(opts, :flags, [])
+
+    if :up in flags and :running in flags and :loopback not in flags do
+      opts |> Keyword.get_values(:addr) |> Enum.filter(&(tuple_size(&1) == 4))
+    else
+      []
     end
   end
 
@@ -313,10 +312,7 @@ defmodule Mix.Tasks.Bot.Evolve do
   defp print_chart(stats) do
     best_vals = Enum.map(stats, & &1.best_fitness)
     avg_vals = Enum.map(stats, & &1.avg_fitness)
-
-    max_val = Enum.max(best_vals) |> Float.ceil() |> trunc()
-    max_val = max(max_val, 1)
-
+    max_val = max(best_vals |> Enum.max() |> Float.ceil() |> trunc(), 1)
     chart_width = 60
     chart_height = 10
     num_gens = length(stats)
@@ -325,40 +321,28 @@ defmodule Mix.Tasks.Bot.Evolve do
 
     for row <- chart_height..0//-1 do
       threshold = max_val * row / chart_height
-
-      label =
-        threshold
-        |> Float.round(0)
-        |> trunc()
-        |> Integer.to_string()
-        |> String.pad_leading(4)
-
-      line =
-        for col <- 0..(chart_width - 1), into: "" do
-          gen_idx = trunc(col * (num_gens - 1) / max(chart_width - 1, 1))
-          best_v = Enum.at(best_vals, gen_idx, 0.0)
-          avg_v = Enum.at(avg_vals, gen_idx, 0.0)
-
-          cond do
-            best_v >= threshold and avg_v >= threshold -> "*"
-            best_v >= threshold -> "*"
-            avg_v >= threshold -> "."
-            true -> " "
-          end
-        end
-
+      label = threshold |> Float.round(0) |> trunc() |> Integer.to_string() |> String.pad_leading(4)
+      line = render_chart_line(best_vals, avg_vals, chart_width, num_gens, threshold)
       Mix.shell().info("#{label} |#{line}")
     end
 
-    axis =
-      "     +" <> String.duplicate("-", chart_width)
-
-    Mix.shell().info(axis)
-
-    gen_labels = gen_label_line(num_gens, chart_width)
-    Mix.shell().info("      #{gen_labels}")
+    Mix.shell().info("     +" <> String.duplicate("-", chart_width))
+    Mix.shell().info("      #{gen_label_line(num_gens, chart_width)}")
     Mix.shell().info("           ---- Best    .... Average")
   end
+
+  defp render_chart_line(best_vals, avg_vals, chart_width, num_gens, threshold) do
+    for col <- 0..(chart_width - 1), into: "" do
+      gen_idx = trunc(col * (num_gens - 1) / max(chart_width - 1, 1))
+      best_v = Enum.at(best_vals, gen_idx, 0.0)
+      avg_v = Enum.at(avg_vals, gen_idx, 0.0)
+      chart_cell(best_v, avg_v, threshold)
+    end
+  end
+
+  defp chart_cell(best_v, _avg_v, threshold) when best_v >= threshold, do: "*"
+  defp chart_cell(_best_v, avg_v, threshold) when avg_v >= threshold, do: "."
+  defp chart_cell(_best_v, _avg_v, _threshold), do: " "
 
   defp gen_label_line(num_gens, chart_width) do
     step = max(div(num_gens, 5), 1)

@@ -1,9 +1,9 @@
 defmodule TetrisGame.BotPlayerTest do
   use ExUnit.Case
 
-  alias TetrisGame.GameRoom
-  alias TetrisGame.BotPlayer
   alias Tetris.Board
+  alias TetrisGame.BotPlayer
+  alias TetrisGame.GameRoom
 
   setup do
     room_id = "bot_exec_#{:rand.uniform(100_000)}"

@@ -1,4 +1,5 @@
 defmodule TetrisWeb.GameChannel do
+  @moduledoc false
   use TetrisWeb, :channel
   alias TetrisGame.GameRoom
 

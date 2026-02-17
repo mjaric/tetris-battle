@@ -302,7 +302,7 @@ defmodule TetrisGame.GameRoomTest do
       # p1 cleared 2 lines → sends 1 garbage row to p2
       # p2 might have pending_garbage or it may already be applied
       # (depends on whether p2's piece locked this tick)
-      has_pending = length(p2.pending_garbage) > 0
+      has_pending = p2.pending_garbage != []
 
       has_garbage_on_board =
         Enum.any?(p2.board, fn row ->
@@ -310,7 +310,7 @@ defmodule TetrisGame.GameRoomTest do
         end)
 
       assert has_pending or has_garbage_on_board,
-             "p2 should have garbage (pending: #{length(p2.pending_garbage)}, on_board: #{has_garbage_on_board})"
+             "p2 should have garbage (pending: #{inspect(p2.pending_garbage)}, on_board: #{has_garbage_on_board})"
     end
 
     test "pending garbage is applied when target's piece locks", %{pid: pid} do

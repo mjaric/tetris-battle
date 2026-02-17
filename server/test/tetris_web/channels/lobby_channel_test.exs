@@ -42,6 +42,6 @@ defmodule TetrisWeb.LobbyChannelTest do
 
     ref = push(socket, "list_rooms", %{})
     assert_reply(ref, :ok, %{rooms: rooms})
-    assert length(rooms) >= 1
+    assert rooms != []
   end
 end

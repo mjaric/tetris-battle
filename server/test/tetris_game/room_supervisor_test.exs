@@ -9,7 +9,6 @@ defmodule TetrisGame.RoomSupervisorTest do
     end
 
     children = DynamicSupervisor.which_children(TetrisGame.RoomSupervisor)
-    assert is_list(children)
-    assert length(children) == 0
+    assert children == []
   end
 end

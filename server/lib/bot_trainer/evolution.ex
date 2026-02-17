@@ -334,17 +334,7 @@ defmodule BotTrainer.Evolution do
 
     children =
       if children_needed > 0 do
-        Enum.map(1..children_needed, fn _ ->
-          if :rand.uniform() < config.crossover_rate do
-            a = tournament_select(scored, config.tournament_size)
-            b = tournament_select(scored, config.tournament_size)
-            crossover(a, b)
-          else
-            tournament_select(scored, config.tournament_size)
-          end
-          |> mutate(config.mutation_rate, config.mutation_sigma)
-          |> normalize()
-        end)
+        Enum.map(1..children_needed, fn _ -> breed_solo_child(scored, config) end)
       else
         []
       end
@@ -352,6 +342,21 @@ defmodule BotTrainer.Evolution do
     immigrants = random_population(config.immigrant_count)
     next_pop = elites ++ children ++ immigrants
     evolve_loop(next_pop, config, on_generation, gen + 1)
+  end
+
+  defp breed_solo_child(scored, config) do
+    child =
+      if :rand.uniform() < config.crossover_rate do
+        a = tournament_select(scored, config.tournament_size)
+        b = tournament_select(scored, config.tournament_size)
+        crossover(a, b)
+      else
+        tournament_select(scored, config.tournament_size)
+      end
+
+    child
+    |> mutate(config.mutation_rate, config.mutation_sigma)
+    |> normalize()
   end
 
   # -----------------------------------------------------------
@@ -437,26 +442,7 @@ defmodule BotTrainer.Evolution do
     children =
       if children_needed > 0 do
         Enum.map(1..children_needed, fn _ ->
-          child =
-            if :rand.uniform() < config.crossover_rate do
-              a =
-                tournament_select(scored, config.tournament_size)
-
-              b =
-                tournament_select(scored, config.tournament_size)
-
-              crossover_keys(a, b, @battle_weight_keys)
-            else
-              tournament_select(scored, config.tournament_size)
-            end
-
-          child
-          |> mutate_keys(
-            config.mutation_rate,
-            config.mutation_sigma,
-            @battle_weight_keys
-          )
-          |> normalize_keys(@battle_weight_keys)
+          breed_battle_child(scored, config)
         end)
       else
         []
@@ -473,6 +459,21 @@ defmodule BotTrainer.Evolution do
       adaptor,
       gen + 1
     )
+  end
+
+  defp breed_battle_child(scored, config) do
+    child =
+      if :rand.uniform() < config.crossover_rate do
+        a = tournament_select(scored, config.tournament_size)
+        b = tournament_select(scored, config.tournament_size)
+        crossover_keys(a, b, @battle_weight_keys)
+      else
+        tournament_select(scored, config.tournament_size)
+      end
+
+    child
+    |> mutate_keys(config.mutation_rate, config.mutation_sigma, @battle_weight_keys)
+    |> normalize_keys(@battle_weight_keys)
   end
 
   # -----------------------------------------------------------
@@ -543,50 +544,43 @@ defmodule BotTrainer.Evolution do
   end
 
   defp update_adaptor(adaptor, best_fitness, best_genome, config) do
-    stag_thresh = config.stagnation_threshold
-    reg_thresh = config.regression_threshold
-
     adaptor = %{adaptor | best_genome: best_genome}
 
     case adaptor.best_fitness do
-      nil ->
-        %{adaptor | best_fitness: best_fitness}
-
-      prev ->
-        improvement = (best_fitness - prev) / max(abs(prev), 1.0)
-        stagnated = improvement < 0.01
-        regressed = improvement < -0.05
-
-        adaptor = %{adaptor | best_fitness: best_fitness}
-
-        adaptor =
-          if stagnated do
-            %{adaptor | stagnation_count: adaptor.stagnation_count + 1}
-          else
-            %{adaptor | stagnation_count: 0}
-          end
-
-        adaptor =
-          if regressed do
-            %{adaptor | regression_count: adaptor.regression_count + 1}
-          else
-            %{adaptor | regression_count: 0}
-          end
-
-        cond do
-          adaptor.mode == :co_evolution and
-              adaptor.regression_count >= reg_thresh ->
-            %{adaptor | mode: :solo_opponents, regression_count: 0}
-
-          adaptor.mode == :solo_opponents and
-              adaptor.stagnation_count >= stag_thresh ->
-            %{adaptor | mode: :co_evolution, stagnation_count: 0}
-
-          true ->
-            adaptor
-        end
+      nil -> %{adaptor | best_fitness: best_fitness}
+      prev -> update_adaptor_with_prev(adaptor, best_fitness, prev, config)
     end
   end
+
+  defp update_adaptor_with_prev(adaptor, best_fitness, prev, config) do
+    improvement = (best_fitness - prev) / max(abs(prev), 1.0)
+
+    adaptor =
+      adaptor
+      |> Map.put(:best_fitness, best_fitness)
+      |> update_stagnation(improvement < 0.01)
+      |> update_regression(improvement < -0.05)
+
+    maybe_switch_mode(adaptor, config.stagnation_threshold, config.regression_threshold)
+  end
+
+  defp update_stagnation(adaptor, true), do: %{adaptor | stagnation_count: adaptor.stagnation_count + 1}
+  defp update_stagnation(adaptor, false), do: %{adaptor | stagnation_count: 0}
+
+  defp update_regression(adaptor, true), do: %{adaptor | regression_count: adaptor.regression_count + 1}
+  defp update_regression(adaptor, false), do: %{adaptor | regression_count: 0}
+
+  defp maybe_switch_mode(adaptor, _stag_thresh, reg_thresh)
+       when adaptor.mode == :co_evolution and adaptor.regression_count >= reg_thresh do
+    %{adaptor | mode: :solo_opponents, regression_count: 0}
+  end
+
+  defp maybe_switch_mode(adaptor, stag_thresh, _reg_thresh)
+       when adaptor.mode == :solo_opponents and adaptor.stagnation_count >= stag_thresh do
+    %{adaptor | mode: :co_evolution, stagnation_count: 0}
+  end
+
+  defp maybe_switch_mode(adaptor, _stag_thresh, _reg_thresh), do: adaptor
 
   # -----------------------------------------------------------
   # Battle-specific crossover and mutation

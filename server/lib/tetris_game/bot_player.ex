@@ -274,26 +274,7 @@ defmodule TetrisGame.BotPlayer do
       |> Enum.map(fn {id, p} -> {id, p} end)
 
     if alive_opponents != [] do
-      target =
-        case state.difficulty do
-          :battle ->
-            {id, _} =
-              Enum.max_by(alive_opponents, fn {_, p} ->
-                {max_height_from_board(p.board), p.score}
-              end)
-
-            id
-
-          :hard ->
-            {id, _} =
-              Enum.max_by(alive_opponents, fn {_, p} -> p.score end)
-
-            id
-
-          _ ->
-            {id, _} = Enum.random(alive_opponents)
-            id
-        end
+      target = select_target(alive_opponents, state.difficulty)
 
       try do
         GameRoom.set_target(room, state.bot_id, target)
@@ -301,6 +282,21 @@ defmodule TetrisGame.BotPlayer do
         :exit, _ -> :ok
       end
     end
+  end
+
+  defp select_target(alive_opponents, :battle) do
+    {id, _} = Enum.max_by(alive_opponents, fn {_, p} -> {max_height_from_board(p.board), p.score} end)
+    id
+  end
+
+  defp select_target(alive_opponents, :hard) do
+    {id, _} = Enum.max_by(alive_opponents, fn {_, p} -> p.score end)
+    id
+  end
+
+  defp select_target(alive_opponents, _difficulty) do
+    {id, _} = Enum.random(alive_opponents)
+    id
   end
 
   defp max_height_from_board(board) do
