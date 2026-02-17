@@ -248,6 +248,49 @@ defmodule Tetris.BotStrategyTest do
     end
   end
 
+  describe "best_placement with :battle" do
+    test "returns valid actions with battle context" do
+      board = Board.new()
+      piece = Piece.new(:T)
+      next = Piece.new(:I)
+
+      battle_ctx = %{
+        pending_garbage_count: 0,
+        own_max_height: 0,
+        opponent_max_heights: [5],
+        opponent_count: 1,
+        leading_opponent_score: 100
+      }
+
+      {rot, x, actions} =
+        BotStrategy.best_placement(
+          board, piece, {3, 0}, next, :battle, battle_ctx
+        )
+
+      assert is_integer(rot) and rot in 0..3
+      assert is_integer(x) and x >= 0
+      assert is_list(actions)
+      assert List.last(actions) == "hard_drop"
+
+      assert Enum.all?(actions, fn a ->
+        a in ["rotate", "move_left", "move_right", "hard_drop"]
+      end)
+    end
+
+    test "5-arg best_placement still works for non-battle" do
+      board = Board.new()
+      piece = Piece.new(:T)
+      next = Piece.new(:I)
+
+      {rot, x, actions} =
+        BotStrategy.best_placement(board, piece, {3, 0}, next, :hard)
+
+      assert is_integer(rot) and rot in 0..3
+      assert is_integer(x) and x >= 0
+      assert List.last(actions) == "hard_drop"
+    end
+  end
+
   describe "best_placement/5" do
     test "returns valid actions for easy difficulty" do
       board = Board.new()

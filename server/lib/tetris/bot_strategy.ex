@@ -61,6 +61,50 @@ defmodule Tetris.BotStrategy do
   def weights_for(diff), do: @default_weights[diff]
 
   @doc """
+  Finds the best placement for battle mode with multiplayer context.
+
+  Like `best_placement/5` but accepts a `battle_ctx` map with
+  garbage, opponent heights, and scoring info. Uses pruned 2-piece
+  lookahead (top 5 candidates) when `next_piece` is available.
+  """
+  @spec best_placement(
+          [[nil | String.t()]],
+          Piece.t(),
+          {integer(), integer()},
+          Piece.t() | nil,
+          difficulty(),
+          map()
+        ) :: {non_neg_integer(), integer(), [String.t()]}
+  def best_placement(
+        board, piece, spawn_pos, next_piece, :battle, battle_ctx
+      ) do
+    placements = enumerate_placements(board, piece)
+    weights = weights_for(:battle)
+
+    scored =
+      if next_piece != nil do
+        score_battle_with_lookahead(
+          placements, next_piece, weights, battle_ctx
+        )
+      else
+        Enum.map(placements, fn pl ->
+          score =
+            score_battle_placement(pl.metrics, weights, battle_ctx)
+
+          {score, pl}
+        end)
+      end
+
+    chosen = pick_placement(scored, :battle)
+    {spawn_x, _} = spawn_pos
+
+    actions =
+      plan_actions(spawn_x, chosen.rotation_count, chosen.target_x)
+
+    {chosen.rotation_count, chosen.target_x, actions}
+  end
+
+  @doc """
   Finds the best placement for the current piece.
 
   Returns `{target_rotation, target_x, actions}` where actions
@@ -226,6 +270,36 @@ defmodule Tetris.BotStrategy do
 
       current_score = score_placement(pl.metrics, weights_for(diff))
       {current_score + best_next_score, pl}
+    end)
+  end
+
+  defp score_battle_with_lookahead(placements, next_piece, weights, ctx) do
+    scored =
+      Enum.map(placements, fn pl ->
+        {score_battle_placement(pl.metrics, weights, ctx), pl}
+      end)
+
+    top_k =
+      scored
+      |> Enum.sort_by(fn {s, _} -> s end, :desc)
+      |> Enum.take(5)
+
+    Enum.map(top_k, fn {greedy_score, pl} ->
+      next_placements =
+        enumerate_placements(pl.resulting_board, next_piece)
+
+      best_next =
+        if next_placements == [] do
+          -1_000_000.0
+        else
+          next_placements
+          |> Enum.map(fn np ->
+            score_battle_placement(np.metrics, weights, ctx)
+          end)
+          |> Enum.max()
+        end
+
+      {greedy_score + best_next, pl}
     end)
   end
 
