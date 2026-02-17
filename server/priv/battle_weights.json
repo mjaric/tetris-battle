@@ -1,0 +1,23 @@
+{
+  "config": {
+    "population_size": 50,
+    "generations": 100,
+    "battles_per_genome": 10
+  },
+  "evolved_at": null,
+  "fitness": 0.0,
+  "weights": {
+    "height": 0.15,
+    "holes": 0.15,
+    "bumpiness": 0.08,
+    "lines": 0.10,
+    "max_height": 0.05,
+    "wells": 0.05,
+    "garbage_incoming": 0.10,
+    "garbage_send": 0.08,
+    "tetris_bonus": 0.08,
+    "opponent_danger": 0.06,
+    "survival": 0.06,
+    "line_efficiency": 0.04
+  }
+}
