@@ -16,7 +16,10 @@
       "mcp__tidewave__project_eval",
       "mcp__tidewave__get_logs",
       "Bash(mix bot.evolve:*)",
-      "Bash(mix deps.clean:*)"
+      "Bash(mix deps.clean:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git worktree:*)",
+      "Bash(npm test:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

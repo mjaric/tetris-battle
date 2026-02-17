@@ -15,7 +15,8 @@ function Cell({ color }: CellProps) {
 
   if (actualColor) {
     if (isGhost) {
-      border = `1px dashed ${actualColor}55`;
+      backgroundColor = `${actualColor}20`;
+      border = `2px solid ${actualColor}88`;
     } else {
       backgroundColor = actualColor;
       boxShadow =

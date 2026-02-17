@@ -49,14 +49,18 @@ export default function MultiBoard({
   if (!myState) return null;
 
   const sortedPlayers = Object.entries(gameState.players).sort(
-    ([a], [b]) => a.localeCompare(b),
+    ([a], [b]) => {
+      if (a === myPlayerId) return -1;
+      if (b === myPlayerId) return 1;
+      return a.localeCompare(b);
+    },
   );
   const playerCount = sortedPlayers.length;
   const cellSize = calculateCellSize(
     playerCount,
     viewportWidth,
   );
-  const gap = Math.max(8, Math.round(cellSize * 0.4));
+  const gap = Math.max(24, Math.round(cellSize * 1.2));
 
   const targetNickname = myState.target
     ? gameState.players[myState.target]?.nickname
@@ -77,7 +81,7 @@ export default function MultiBoard({
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "flex-end",
           gap,
         }}
       >

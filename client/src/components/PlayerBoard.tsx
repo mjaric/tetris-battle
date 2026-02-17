@@ -35,7 +35,8 @@ function PlayerCell({ color, size }: PlayerCellProps) {
 
   if (actualColor) {
     if (isGhost) {
-      border = `1px dashed ${actualColor}55`;
+      backgroundColor = `${actualColor}20`;
+      border = `2px solid ${actualColor}88`;
     } else {
       backgroundColor = actualColor;
       if (showInset) {
@@ -112,10 +113,10 @@ function glowStyles(
   switch (level) {
     case "self":
       return {
-        border: `3px solid hsl(${String(h)}, 70%, 60%)`,
+        border: `2px solid hsla(${String(h)}, 60%, 55%, 0.6)`,
         boxShadow:
-          `0 0 40px 10px hsla(${String(h)}, 70%, 50%, 0.4), ` +
-          `0 0 80px 20px hsla(${String(h)}, 70%, 50%, 0.2)`,
+          `0 0 12px 2px hsla(${String(h)}, 60%, 50%, 0.2), ` +
+          `0 0 24px 4px hsla(${String(h)}, 60%, 50%, 0.08)`,
         opacity: 1.0,
       };
     case "target":
@@ -157,6 +158,10 @@ function MiniNextPiece({
         display: "inline-grid",
         gridTemplateColumns: `repeat(${String(cols)}, ${String(hudCell)}px)`,
         gap: 1,
+        padding: 4,
+        backgroundColor: "rgba(255,255,255,0.04)",
+        borderRadius: 4,
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       {piece.shape.map((row, y) =>
@@ -169,7 +174,7 @@ function MiniNextPiece({
               backgroundColor: cell ? piece.color : "transparent",
               borderRadius: 2,
               boxShadow: cell
-                ? "inset 0 0 4px rgba(255,255,255,0.3)"
+                ? `inset 0 0 4px rgba(255,255,255,0.3), 0 0 3px ${piece.color}44`
                 : "none",
             }}
           />
@@ -179,27 +184,65 @@ function MiniNextPiece({
   );
 }
 
-function LatencyBadge({ latency }: { latency: number }) {
-  const colorClass =
-    latency < 80
-      ? "text-green"
-      : latency < 150
-        ? "text-amber"
-        : "text-red";
+function latencyColor(ms: number): string {
+  if (ms < 80) return "#00b894";
+  if (ms < 150) return "#ffa502";
+  return "#ff4757";
+}
 
+function HudStat({
+  label,
+  value,
+  accent,
+  fontSize,
+}: {
+  label: string;
+  value: string;
+  accent: string;
+  fontSize: number;
+}) {
   return (
-    <>
-      <span style={{ margin: "0 6px", color: "#555" }}>|</span>
-      <span style={{ color: "#888" }}>Ping: </span>
-      <span className={colorClass}>{latency}ms</span>
-    </>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "3px 8px",
+        backgroundColor: "rgba(255,255,255,0.03)",
+        borderRadius: 4,
+        border: "1px solid rgba(255,255,255,0.06)",
+        minWidth: 0,
+        flex: 1,
+      }}
+    >
+      <span
+        style={{
+          fontSize: Math.max(6, fontSize - 3),
+          textTransform: "uppercase",
+          letterSpacing: 1,
+          color: "#666",
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: Math.max(9, fontSize + 1),
+          fontWeight: "bold",
+          fontFamily: "monospace",
+          color: accent,
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
 function tintAlpha(level: GlowLevel): number {
   switch (level) {
     case "self":
-      return 0.08;
+      return 0.03;
     case "target":
       return 0.05;
     case "other":
@@ -236,10 +279,13 @@ export default function PlayerBoard({
       {isMe ? (
         <div
           style={{
-            marginBottom: 6,
-            fontSize,
-            lineHeight: 1.3,
+            marginBottom: 8,
             width: boardPx + 8,
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+            border: `1px solid hsla(${String(playerHue)}, 50%, 50%, 0.2)`,
+            borderRadius: 6,
+            padding: "6px 8px",
           }}
         >
           <div
@@ -247,28 +293,29 @@ export default function PlayerBoard({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              marginBottom: 6,
             }}
           >
             <div
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
                 overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
               <span
                 style={{
                   fontSize: Math.max(7, fontSize - 2),
-                  backgroundColor:
-                    `hsl(${String(playerHue)}, 70%, 50%)`,
+                  background:
+                    `linear-gradient(135deg, hsl(${String(playerHue)}, 70%, 50%), hsl(${String(playerHue)}, 70%, 40%))`,
                   color: "#fff",
                   borderRadius: 3,
-                  padding: "1px 4px",
-                  marginRight: 4,
-                  verticalAlign: "middle",
+                  padding: "2px 6px",
                   fontWeight: "bold",
-                  letterSpacing: 1,
+                  letterSpacing: 1.5,
                   textTransform: "uppercase",
+                  flexShrink: 0,
                 }}
               >
                 You
@@ -276,8 +323,11 @@ export default function PlayerBoard({
               <span
                 style={{
                   fontWeight: "bold",
-                  color:
-                    `hsl(${String(playerHue)}, 70%, 70%)`,
+                  fontSize: Math.max(9, fontSize + 1),
+                  color: `hsl(${String(playerHue)}, 60%, 75%)`,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {nickname}
@@ -290,41 +340,90 @@ export default function PlayerBoard({
               />
             )}
           </div>
+
           <div
             style={{
-              textAlign: "center",
-              color: "#888",
-              marginTop: 2,
+              display: "flex",
+              gap: 4,
+              marginBottom: 5,
             }}
           >
-            Score: {score.toLocaleString()} | Lines: {lines} |
-            Lvl: {level ?? 1}
+            <HudStat
+              label="Score"
+              value={score.toLocaleString()}
+              accent="#fff"
+              fontSize={fontSize}
+            />
+            <HudStat
+              label="Lines"
+              value={String(lines)}
+              accent={`hsl(${String(playerHue)}, 60%, 70%)`}
+              fontSize={fontSize}
+            />
+            <HudStat
+              label="Level"
+              value={String(level ?? 1)}
+              accent={`hsl(${String(playerHue)}, 60%, 70%)`}
+              fontSize={fontSize}
+            />
           </div>
+
           <div
             style={{
-              textAlign: "center",
-              marginTop: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               fontSize: Math.max(7, fontSize - 1),
             }}
           >
-            <span className="text-cyan">
-              Target: {targetNickname ?? "\u2014"}
-            </span>
-            <span style={{ color: "#555" }}> [Tab]</span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: Math.max(6, fontSize - 3),
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  color: "#666",
+                }}
+              >
+                Target
+              </span>
+              <span
+                style={{
+                  color: "#00f0f0",
+                  fontWeight: "bold",
+                }}
+              >
+                {targetNickname ?? "\u2014"}
+              </span>
+              <span
+                style={{
+                  fontSize: Math.max(6, fontSize - 3),
+                  color: "#444",
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderRadius: 2,
+                  padding: "1px 3px",
+                }}
+              >
+                Tab
+              </span>
+            </div>
             {latency != null && (
-              <LatencyBadge latency={latency} />
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: Math.max(7, fontSize - 2),
+                  color: latencyColor(latency),
+                }}
+              >
+                {latency}ms
+              </span>
             )}
-          </div>
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: 1,
-              fontSize: Math.max(7, fontSize - 2),
-              color: "#555",
-            }}
-          >
-            [&larr; &rarr;] Move [&uarr;] Rotate [Space]
-            Drop [&darr;] Soft drop
           </div>
         </div>
       ) : (

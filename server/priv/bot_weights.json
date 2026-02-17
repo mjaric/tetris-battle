@@ -1,17 +1,17 @@
 {
-  "weights": {
-    "height": 0.05,
-    "holes": 0.54,
-    "bumpiness": 0.12,
-    "lines": 0.0,
-    "max_height": 0.0,
-    "wells": 0.29
-  },
-  "fitness": 63.1,
   "config": {
     "population_size": 30,
     "generations": 100,
     "games_per_genome": 30
   },
-  "evolved_at": "2026-02-16T15:30:00Z"
+  "evolved_at": "2026-02-17T09:43:50.907646Z",
+  "fitness": 149.47,
+  "weights": {
+    "lines": 0.3763,
+    "height": 0.0,
+    "holes": 0.3546,
+    "bumpiness": 0.0849,
+    "max_height": 0.0,
+    "wells": 0.1841
+  }
 }
