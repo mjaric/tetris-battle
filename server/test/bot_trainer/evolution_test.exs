@@ -178,4 +178,77 @@ defmodule BotTrainer.EvolutionTest do
       :ets.delete(stats_log)
     end
   end
+
+  @battle_weights [
+    :height, :holes, :bumpiness, :lines, :max_height, :wells,
+    :garbage_incoming, :garbage_send, :tetris_bonus,
+    :opponent_danger, :survival, :line_efficiency
+  ]
+
+  describe "normalize_keys/2" do
+    test "normalizes arbitrary key set" do
+      genome = %{a: 2.0, b: 3.0, c: 5.0}
+      normalized = Evolution.normalize_keys(genome, [:a, :b, :c])
+
+      assert_in_delta normalized.a, 0.2, 0.001
+      assert_in_delta normalized.b, 0.3, 0.001
+      assert_in_delta normalized.c, 0.5, 0.001
+    end
+
+    test "handles all-zero edge case" do
+      genome = %{a: 0.0, b: 0.0}
+      normalized = Evolution.normalize_keys(genome, [:a, :b])
+
+      assert_in_delta normalized.a, 0.5, 0.001
+      assert_in_delta normalized.b, 0.5, 0.001
+    end
+  end
+
+  describe "battle mode" do
+    test "random_battle_population generates 12-key genomes" do
+      pop = Evolution.random_battle_population(5)
+      assert length(pop) == 5
+
+      for genome <- pop do
+        for key <- @battle_weights do
+          assert Map.has_key?(genome, key), "Missing key: #{key}"
+          assert is_float(genome[key])
+        end
+      end
+    end
+
+    test "battle genomes are normalized to sum ~1.0" do
+      pop = Evolution.random_battle_population(10)
+
+      for genome <- pop do
+        total =
+          Enum.reduce(@battle_weights, 0.0, fn k, acc ->
+            acc + genome[k]
+          end)
+
+        assert_in_delta total, 1.0, 0.001
+      end
+    end
+
+    test "tiny battle evolution completes" do
+      config =
+        Evolution.default_battle_config()
+        |> Map.merge(%{
+          population_size: 4,
+          generations: 2,
+          battles_per_genome: 2,
+          elitism_count: 1,
+          immigrant_count: 1,
+          lookahead: false,
+          max_concurrency: 2
+        })
+
+      best = Evolution.evolve_battle(config, fn _ -> :ok end)
+
+      for key <- @battle_weights do
+        assert Map.has_key?(best, key)
+        assert is_float(best[key])
+      end
+    end
+  end
 end
