@@ -1,4 +1,5 @@
 defmodule TetrisWeb do
+  @moduledoc false
   def channel do
     quote do
       use Phoenix.Channel

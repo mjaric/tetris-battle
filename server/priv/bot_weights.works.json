@@ -1,0 +1,17 @@
+{
+  "config": {
+    "population_size": 30,
+    "generations": 100,
+    "games_per_genome": 30
+  },
+  "evolved_at": "2026-02-17T12:23:46.074280Z",
+  "fitness": 140.57,
+  "weights": {
+    "lines": 0.358,
+    "height": 0.0,
+    "holes": 0.3657,
+    "bumpiness": 0.089,
+    "max_height": 0.0,
+    "wells": 0.1874
+  }
+}

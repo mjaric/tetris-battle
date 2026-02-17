@@ -1,6 +1,6 @@
-import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants.ts";
+import { BOARD_WIDTH, BOARD_HEIGHT } from '../constants.ts';
 
-type GlowLevel = "self" | "target" | "other" | "eliminated";
+type GlowLevel = 'self' | 'target' | 'other' | 'eliminated';
 
 interface PlayerBoardProps {
   board: (string | null)[][];
@@ -24,13 +24,12 @@ interface PlayerCellProps {
 }
 
 function PlayerCell({ color, size }: PlayerCellProps) {
-  const isGhost =
-    typeof color === "string" && color.startsWith("ghost:");
-  const actualColor = isGhost ? color.split(":")[1] : color;
+  const isGhost = typeof color === 'string' && color.startsWith('ghost:');
+  const actualColor = isGhost ? color.split(':')[1] : color;
   const showInset = size > 16;
 
-  let backgroundColor = "#1a1a2e";
-  let border = "1px solid #333";
+  let backgroundColor = '#1a1a2e';
+  let border = '1px solid #333';
   let boxShadow: string | undefined;
 
   if (actualColor) {
@@ -40,11 +39,9 @@ function PlayerCell({ color, size }: PlayerCellProps) {
     } else {
       backgroundColor = actualColor;
       if (showInset) {
-        boxShadow =
-          "inset 0 0 8px rgba(255,255,255,0.3), " +
-          "inset -2px -2px 4px rgba(0,0,0,0.3)";
+        boxShadow = 'inset 0 0 8px rgba(255,255,255,0.3), ' + 'inset -2px -2px 4px rgba(0,0,0,0.3)';
       }
-      border = "1px solid rgba(255,255,255,0.15)";
+      border = '1px solid rgba(255,255,255,0.15)';
     }
   }
 
@@ -56,7 +53,7 @@ function PlayerCell({ color, size }: PlayerCellProps) {
         backgroundColor,
         border,
         boxShadow,
-        boxSizing: "border-box",
+        boxSizing: 'border-box',
       }}
     />
   );
@@ -68,11 +65,7 @@ interface GarbageMeterProps {
   totalRows: number;
 }
 
-function GarbageMeter({
-  count,
-  cellSize,
-  totalRows,
-}: GarbageMeterProps) {
+function GarbageMeter({ count, cellSize, totalRows }: GarbageMeterProps) {
   if (count === 0) return null;
 
   const meterWidth = Math.max(3, Math.round(cellSize * 0.2));
@@ -84,84 +77,72 @@ function GarbageMeter({
       style={{
         width: meterWidth,
         height: totalHeight,
-        position: "relative",
+        position: 'relative',
         marginRight: Math.max(1, Math.round(cellSize * 0.07)),
       }}
     >
       <div
         style={{
-          position: "absolute",
+          position: 'absolute',
           bottom: 0,
-          width: "100%",
+          width: '100%',
           height: meterHeight,
-          backgroundColor: "#ff4444",
+          backgroundColor: '#ff4444',
           borderRadius: Math.max(1, Math.round(meterWidth / 3)),
-          transition: "height 0.15s ease-out",
-          boxShadow: "0 0 6px rgba(255, 68, 68, 0.6)",
+          transition: 'height 0.15s ease-out',
+          boxShadow: '0 0 6px rgba(255, 68, 68, 0.6)',
         }}
       />
     </div>
   );
 }
 
-function glowStyles(
-  hue: number,
-  level: GlowLevel,
-): React.CSSProperties {
+function glowStyles(hue: number, level: GlowLevel): React.CSSProperties {
   const h = hue;
 
   switch (level) {
-    case "self":
+    case 'self':
       return {
         border: `2px solid hsla(${String(h)}, 60%, 55%, 0.6)`,
         boxShadow:
-          `0 0 12px 2px hsla(${String(h)}, 60%, 50%, 0.2), ` +
-          `0 0 24px 4px hsla(${String(h)}, 60%, 50%, 0.08)`,
+          `0 0 12px 2px hsla(${String(h)}, 60%, 50%, 0.2), ` + `0 0 24px 4px hsla(${String(h)}, 60%, 50%, 0.08)`,
         opacity: 1.0,
       };
-    case "target":
+    case 'target':
       return {
         border: `2px solid hsla(${String(h)}, 70%, 60%, 0.7)`,
-        boxShadow:
-          `0 0 25px 5px hsla(${String(h)}, 70%, 50%, 0.25)`,
+        boxShadow: `0 0 25px 5px hsla(${String(h)}, 70%, 50%, 0.25)`,
         opacity: 0.9,
       };
-    case "other":
+    case 'other':
       return {
         border: `1px solid hsla(${String(h)}, 70%, 60%, 0.3)`,
-        boxShadow:
-          `0 0 10px 2px hsla(${String(h)}, 70%, 50%, 0.08)`,
+        boxShadow: `0 0 10px 2px hsla(${String(h)}, 70%, 50%, 0.08)`,
         opacity: 0.5,
       };
-    case "eliminated":
+    case 'eliminated':
       return {
-        border: "1px solid hsla(0, 0%, 50%, 0.1)",
-        boxShadow: "none",
+        border: '1px solid hsla(0, 0%, 50%, 0.1)',
+        boxShadow: 'none',
         opacity: 0.2,
-        filter: "grayscale(1)",
+        filter: 'grayscale(1)',
       };
   }
 }
 
-function MiniNextPiece({
-  piece,
-  hudCell,
-}: {
-  piece: { shape: number[][]; color: string };
-  hudCell: number;
-}) {
+function MiniNextPiece({ piece, hudCell }: { piece: { shape: number[][]; color: string }; hudCell: number }) {
   const cols = piece.shape[0]?.length ?? 0;
 
   return (
     <div
       style={{
-        display: "inline-grid",
+        display: 'inline-grid',
         gridTemplateColumns: `repeat(${String(cols)}, ${String(hudCell)}px)`,
         gap: 1,
         padding: 4,
-        backgroundColor: "rgba(255,255,255,0.04)",
+        backgroundColor: 'rgba(255,255,255,0.04)',
         borderRadius: 4,
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: '1px solid rgba(255,255,255,0.08)',
       }}
     >
       {piece.shape.map((row, y) =>
@@ -171,23 +152,21 @@ function MiniNextPiece({
             style={{
               width: hudCell,
               height: hudCell,
-              backgroundColor: cell ? piece.color : "transparent",
+              backgroundColor: cell ? piece.color : 'transparent',
               borderRadius: 2,
-              boxShadow: cell
-                ? `inset 0 0 4px rgba(255,255,255,0.3), 0 0 3px ${piece.color}44`
-                : "none",
+              boxShadow: cell ? `inset 0 0 4px rgba(255,255,255,0.3), 0 0 3px ${piece.color}44` : 'none',
             }}
           />
-        )),
+        ))
       )}
     </div>
   );
 }
 
 function latencyColor(ms: number): string {
-  if (ms < 80) return "#00b894";
-  if (ms < 150) return "#ffa502";
-  return "#ff4757";
+  if (ms < 80) return '#00b894';
+  if (ms < 150) return '#ffa502';
+  return '#ff4757';
 }
 
 function HudStat({
@@ -204,13 +183,13 @@ function HudStat({
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "3px 8px",
-        backgroundColor: "rgba(255,255,255,0.03)",
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '3px 8px',
+        backgroundColor: 'rgba(255,255,255,0.03)',
         borderRadius: 4,
-        border: "1px solid rgba(255,255,255,0.06)",
+        border: '1px solid rgba(255,255,255,0.06)',
         minWidth: 0,
         flex: 1,
       }}
@@ -218,9 +197,9 @@ function HudStat({
       <span
         style={{
           fontSize: Math.max(6, fontSize - 3),
-          textTransform: "uppercase",
+          textTransform: 'uppercase',
           letterSpacing: 1,
-          color: "#666",
+          color: '#666',
         }}
       >
         {label}
@@ -228,8 +207,8 @@ function HudStat({
       <span
         style={{
           fontSize: Math.max(9, fontSize + 1),
-          fontWeight: "bold",
-          fontFamily: "monospace",
+          fontWeight: 'bold',
+          fontFamily: 'monospace',
           color: accent,
         }}
       >
@@ -241,13 +220,13 @@ function HudStat({
 
 function tintAlpha(level: GlowLevel): number {
   switch (level) {
-    case "self":
+    case 'self':
       return 0.03;
-    case "target":
+    case 'target':
       return 0.05;
-    case "other":
+    case 'other':
       return 0.03;
-    case "eliminated":
+    case 'eliminated':
       return 0;
   }
 }
@@ -270,51 +249,49 @@ export default function PlayerBoard({
   const fontSize = Math.max(8, Math.round(cellSize * 0.4));
   const alpha = tintAlpha(glowLevel);
   const glow = glowStyles(playerHue, glowLevel);
-  const dimmed = glowLevel === "eliminated";
+  const dimmed = glowLevel === 'eliminated';
   const hudCell = Math.round(cellSize * 0.5);
   const boardPx = BOARD_WIDTH * cellSize;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       {isMe ? (
         <div
           style={{
             marginBottom: 8,
             width: boardPx + 8,
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
             border: `1px solid hsla(${String(playerHue)}, 50%, 50%, 0.2)`,
             borderRadius: 6,
-            padding: "6px 8px",
+            padding: '6px 8px',
           }}
         >
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               marginBottom: 6,
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
+                display: 'flex',
+                alignItems: 'center',
                 gap: 6,
-                overflow: "hidden",
+                overflow: 'hidden',
               }}
             >
               <span
                 style={{
                   fontSize: Math.max(7, fontSize - 2),
-                  background:
-                    `linear-gradient(135deg, hsl(${String(playerHue)}, 70%, 50%), hsl(${String(playerHue)}, 70%, 40%))`,
-                  color: "#fff",
+                  background: `linear-gradient(135deg, hsl(${String(playerHue)}, 70%, 50%), hsl(${String(playerHue)}, 70%, 40%))`,
+                  color: '#fff',
                   borderRadius: 3,
-                  padding: "2px 6px",
-                  fontWeight: "bold",
+                  padding: '2px 6px',
+                  fontWeight: 'bold',
                   letterSpacing: 1.5,
-                  textTransform: "uppercase",
+                  textTransform: 'uppercase',
                   flexShrink: 0,
                 }}
               >
@@ -322,38 +299,28 @@ export default function PlayerBoard({
               </span>
               <span
                 style={{
-                  fontWeight: "bold",
+                  fontWeight: 'bold',
                   fontSize: Math.max(9, fontSize + 1),
                   color: `hsl(${String(playerHue)}, 60%, 75%)`,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {nickname}
               </span>
             </div>
-            {nextPiece && (
-              <MiniNextPiece
-                piece={nextPiece}
-                hudCell={hudCell}
-              />
-            )}
+            {nextPiece && <MiniNextPiece piece={nextPiece} hudCell={hudCell} />}
           </div>
 
           <div
             style={{
-              display: "flex",
+              display: 'flex',
               gap: 4,
               marginBottom: 5,
             }}
           >
-            <HudStat
-              label="Score"
-              value={score.toLocaleString()}
-              accent="#fff"
-              fontSize={fontSize}
-            />
+            <HudStat label="Score" value={score.toLocaleString()} accent="#fff" fontSize={fontSize} />
             <HudStat
               label="Lines"
               value={String(lines)}
@@ -370,44 +337,44 @@ export default function PlayerBoard({
 
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               fontSize: Math.max(7, fontSize - 1),
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
+                display: 'flex',
+                alignItems: 'center',
                 gap: 4,
               }}
             >
               <span
                 style={{
                   fontSize: Math.max(6, fontSize - 3),
-                  textTransform: "uppercase",
+                  textTransform: 'uppercase',
                   letterSpacing: 1,
-                  color: "#666",
+                  color: '#666',
                 }}
               >
                 Target
               </span>
               <span
                 style={{
-                  color: "#00f0f0",
-                  fontWeight: "bold",
+                  color: '#00f0f0',
+                  fontWeight: 'bold',
                 }}
               >
-                {targetNickname ?? "\u2014"}
+                {targetNickname ?? '\u2014'}
               </span>
               <span
                 style={{
                   fontSize: Math.max(6, fontSize - 3),
-                  color: "#444",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                  color: '#444',
+                  backgroundColor: 'rgba(255,255,255,0.04)',
                   borderRadius: 2,
-                  padding: "1px 3px",
+                  padding: '1px 3px',
                 }}
               >
                 Tab
@@ -416,7 +383,7 @@ export default function PlayerBoard({
             {latency != null && (
               <span
                 style={{
-                  fontFamily: "monospace",
+                  fontFamily: 'monospace',
                   fontSize: Math.max(7, fontSize - 2),
                   color: latencyColor(latency),
                 }}
@@ -429,7 +396,7 @@ export default function PlayerBoard({
       ) : (
         <div
           style={{
-            textAlign: "center",
+            textAlign: 'center',
             marginBottom: 6,
             fontSize,
             lineHeight: 1.3,
@@ -438,17 +405,16 @@ export default function PlayerBoard({
         >
           <div
             style={{
-              fontWeight: "bold",
-              color:
-                `hsl(${String(playerHue)}, 70%, 70%)`,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              fontWeight: 'bold',
+              color: `hsl(${String(playerHue)}, 70%, 70%)`,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             {nickname}
           </div>
-          <div style={{ color: "#888" }}>
+          <div style={{ color: '#888' }}>
             {score} pts / {lines} lines
           </div>
         </div>
@@ -456,37 +422,23 @@ export default function PlayerBoard({
 
       <div
         style={{
-          position: "relative",
+          position: 'relative',
           ...glow,
           borderRadius: 4,
         }}
       >
-        <div
-          style={{ display: "flex", alignItems: "flex-end" }}
-        >
-          <GarbageMeter
-            count={pendingGarbage}
-            cellSize={cellSize}
-            totalRows={BOARD_HEIGHT}
-          />
+        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <GarbageMeter count={pendingGarbage} cellSize={cellSize} totalRows={BOARD_HEIGHT} />
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns:
-                `repeat(${String(BOARD_WIDTH)}, ${String(cellSize)}px)`,
-              gridTemplateRows:
-                `repeat(${String(BOARD_HEIGHT)}, ${String(cellSize)}px)`,
-              position: "relative",
+              display: 'grid',
+              gridTemplateColumns: `repeat(${String(BOARD_WIDTH)}, ${String(cellSize)}px)`,
+              gridTemplateRows: `repeat(${String(BOARD_HEIGHT)}, ${String(cellSize)}px)`,
+              position: 'relative',
             }}
           >
             {board.map((row, y) =>
-              row.map((cell, x) => (
-                <PlayerCell
-                  key={`${String(y)}-${String(x)}`}
-                  color={cell}
-                  size={cellSize}
-                />
-              )),
+              row.map((cell, x) => <PlayerCell key={`${String(y)}-${String(x)}`} color={cell} size={cellSize} />)
             )}
           </div>
         </div>
@@ -494,59 +446,50 @@ export default function PlayerBoard({
         {alpha > 0 && (
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
-              backgroundColor:
-                `hsla(${String(playerHue)}, 70%, 50%, ${String(alpha)})`,
+              backgroundColor: `hsla(${String(playerHue)}, 70%, 50%, ${String(alpha)})`,
               borderRadius: 4,
-              pointerEvents: "none",
+              pointerEvents: 'none',
             }}
           />
         )}
 
-        {glowLevel === "target" && (
+        {glowLevel === 'target' && (
           <>
-            <CornerBrackets
-              hue={playerHue}
-              fontSize={fontSize}
-            />
+            <CornerBrackets hue={playerHue} fontSize={fontSize} />
             <div
               style={{
-                position: "absolute",
+                position: 'absolute',
                 inset: 0,
-                border:
-                  `2px solid hsl(${String(playerHue)}, 70%, 60%)`,
+                border: `2px solid hsl(${String(playerHue)}, 70%, 60%)`,
                 borderRadius: 4,
-                pointerEvents: "none",
-                animation:
-                  "pulse-border 1.5s ease-in-out infinite",
+                pointerEvents: 'none',
+                animation: 'pulse-border 1.5s ease-in-out infinite',
               }}
             />
           </>
         )}
 
-        {glowLevel === "eliminated" && (
+        {glowLevel === 'eliminated' && (
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(0, 0, 0, 0.6)",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
               borderRadius: 4,
-              pointerEvents: "none",
+              pointerEvents: 'none',
             }}
           >
             <span
               style={{
-                color: "#ff4757",
-                fontWeight: "bold",
-                fontSize: Math.max(
-                  10,
-                  Math.round(cellSize * 0.6),
-                ),
-                textTransform: "uppercase",
+                color: '#ff4757',
+                fontWeight: 'bold',
+                fontSize: Math.max(10, Math.round(cellSize * 0.6)),
+                textTransform: 'uppercase',
                 letterSpacing: 2,
               }}
             >
@@ -564,36 +507,25 @@ interface CornerBracketsProps {
   fontSize: number;
 }
 
-function CornerBrackets({
-  hue,
-  fontSize,
-}: CornerBracketsProps) {
+function CornerBrackets({ hue, fontSize }: CornerBracketsProps) {
   const color = `hsl(${String(hue)}, 70%, 65%)`;
   const size = Math.max(10, fontSize * 1.5);
   const offset = -Math.round(size * 0.3);
   const base: React.CSSProperties = {
-    position: "absolute",
+    position: 'absolute',
     color,
     fontSize: size,
     lineHeight: 1,
-    pointerEvents: "none",
-    fontWeight: "bold",
+    pointerEvents: 'none',
+    fontWeight: 'bold',
   };
 
   return (
     <>
-      <span style={{ ...base, top: offset, left: offset }}>
-        &#x250F;
-      </span>
-      <span style={{ ...base, top: offset, right: offset }}>
-        &#x2513;
-      </span>
-      <span style={{ ...base, bottom: offset, left: offset }}>
-        &#x2517;
-      </span>
-      <span style={{ ...base, bottom: offset, right: offset }}>
-        &#x251B;
-      </span>
+      <span style={{ ...base, top: offset, left: offset }}>&#x250F;</span>
+      <span style={{ ...base, top: offset, right: offset }}>&#x2513;</span>
+      <span style={{ ...base, bottom: offset, left: offset }}>&#x2517;</span>
+      <span style={{ ...base, bottom: offset, right: offset }}>&#x251B;</span>
     </>
   );
 }

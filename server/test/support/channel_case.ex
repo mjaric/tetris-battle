@@ -1,4 +1,5 @@
 defmodule TetrisWeb.ChannelCase do
+  @moduledoc false
   use ExUnit.CaseTemplate
 
   using do

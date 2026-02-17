@@ -1,5 +1,5 @@
-import NextPiece from "./NextPiece.tsx";
-import StatBox from "./StatBox.tsx";
+import NextPiece from './NextPiece.tsx';
+import StatBox from './StatBox.tsx';
 
 interface SidebarProps {
   score: number;
@@ -8,12 +8,7 @@ interface SidebarProps {
   nextPiece: { shape: number[][]; color: string } | null;
 }
 
-export default function Sidebar({
-  score,
-  lines,
-  level,
-  nextPiece,
-}: SidebarProps) {
+export default function Sidebar({ score, lines, level, nextPiece }: SidebarProps) {
   return (
     <div className="ml-6 min-w-35 rounded-lg border border-border bg-bg-secondary p-5">
       <NextPiece piece={nextPiece} />
@@ -22,9 +17,7 @@ export default function Sidebar({
       <StatBox label="Level" value={level} />
 
       <div className="mt-6 border-t border-border pt-4">
-        <h3 className="m-0 mb-2.5 text-xs uppercase tracking-widest text-gray-400">
-          Controls
-        </h3>
+        <h3 className="m-0 mb-2.5 text-xs uppercase tracking-widest text-gray-400">Controls</h3>
         <div className="text-xs leading-7 text-gray-600">
           <div>
             <Kbd>&larr; &rarr;</Kbd> Move

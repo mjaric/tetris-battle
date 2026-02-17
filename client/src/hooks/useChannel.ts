@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import type { Socket, Channel } from "phoenix";
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { Socket, Channel } from 'phoenix';
 
 interface UseChannelResult {
   channel: Channel | null;
@@ -9,10 +9,7 @@ interface UseChannelResult {
   leave: () => void;
 }
 
-export function useChannel(
-  socket: Socket | null,
-  topic: string | null,
-): UseChannelResult {
+export function useChannel(socket: Socket | null, topic: string | null): UseChannelResult {
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const channelRef = useRef<Channel | null>(null);
@@ -28,11 +25,11 @@ export function useChannel(
 
       const ch = socket.channel(topic, params);
       ch.join()
-        .receive("ok", () => {
+        .receive('ok', () => {
           setJoined(true);
           setError(null);
         })
-        .receive("error", (resp: unknown) => {
+        .receive('error', (resp: unknown) => {
           setError(resp);
           setJoined(false);
         });
@@ -41,7 +38,7 @@ export function useChannel(
       setRevision((r) => r + 1);
       return ch;
     },
-    [socket, topic],
+    [socket, topic]
   );
 
   const leave = useCallback(() => {
@@ -71,7 +68,7 @@ export function useChannel(
       leave,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [joined, error, join, leave, revision],
+    [joined, error, join, leave, revision]
   );
 
   return result;

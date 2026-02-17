@@ -1,9 +1,9 @@
 defmodule Tetris.PlayerStateTest do
   use ExUnit.Case, async: true
 
-  alias Tetris.PlayerState
   alias Tetris.Board
   alias Tetris.Piece
+  alias Tetris.PlayerState
 
   describe "new/2" do
     test "creates a valid state with correct defaults" do
@@ -106,6 +106,7 @@ defmodule Tetris.PlayerStateTest do
     test "includes composited current piece in board" do
       # Create a state with a known T piece at a known position
       piece = Piece.new(:T)
+
       state = %PlayerState{
         player_id: "player-1",
         nickname: "Alice",
@@ -138,6 +139,7 @@ defmodule Tetris.PlayerStateTest do
 
     test "includes ghost piece in board" do
       piece = Piece.new(:T)
+
       state = %PlayerState{
         player_id: "player-1",
         nickname: "Alice",
@@ -205,6 +207,7 @@ defmodule Tetris.PlayerStateTest do
 
     test "does not composite piece when player is dead" do
       piece = Piece.new(:T)
+
       state = %PlayerState{
         player_id: "player-1",
         nickname: "Alice",
@@ -314,6 +317,7 @@ defmodule Tetris.PlayerStateTest do
       state = PlayerState.new("player-1", "Alice")
 
       new_piece = Piece.new(:I)
+
       updated_map = %{
         board: Board.new(),
         current_piece: new_piece,

@@ -49,21 +49,17 @@ defmodule Tetris.Board do
       row
       |> Enum.with_index()
       |> Enum.all?(fn {cell, sx} ->
-        if cell == 1 do
-          bx = px + sx
-          by = py + sy
-
-          # x must be in bounds
-          bx >= 0 and bx < @width and
-            # y must be below the ceiling
-            by < @height and
-            # if y is negative (above board), it's valid (spawn area)
-            (by < 0 or cell_empty?(board, bx, by))
-        else
-          true
-        end
+        cell_valid?(board, cell, px + sx, py + sy)
       end)
     end)
+  end
+
+  # x must be in bounds; y must be below ceiling.
+  # If y is negative (above board), it's valid (spawn area).
+  defp cell_valid?(_board, 0, _bx, _by), do: true
+
+  defp cell_valid?(board, _cell, bx, by) do
+    bx >= 0 and bx < @width and by < @height and (by < 0 or cell_empty?(board, bx, by))
   end
 
   @doc """
@@ -81,22 +77,19 @@ defmodule Tetris.Board do
       row
       |> Enum.with_index()
       |> Enum.reduce(acc, fn {cell, sx}, acc2 ->
-        if cell == 1 do
-          bx = px + sx
-          by = py + sy
-
-          if by >= 0 and by < @height and bx >= 0 and bx < @width do
-            List.update_at(acc2, by, fn board_row ->
-              List.replace_at(board_row, bx, color)
-            end)
-          else
-            acc2
-          end
-        else
-          acc2
-        end
+        set_board_cell(acc2, cell, px + sx, py + sy, color)
       end)
     end)
+  end
+
+  defp set_board_cell(board, 0, _bx, _by, _color), do: board
+
+  defp set_board_cell(board, _cell, bx, by, color) do
+    if by >= 0 and by < @height and bx >= 0 and bx < @width do
+      List.update_at(board, by, &List.replace_at(&1, bx, color))
+    else
+      board
+    end
   end
 
   @doc """

@@ -1,0 +1,8 @@
+client/node_modules
+client/dist
+server/_build
+server/deps
+server/.elixir_ls
+.git
+docs/
+*.md

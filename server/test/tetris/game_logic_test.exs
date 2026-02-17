@@ -383,6 +383,7 @@ defmodule Tetris.GameLogicTest do
 
     test "scoring is multiplied by level" do
       board = Board.new()
+
       row_19 =
         Enum.map(0..9, fn col ->
           if col in [3, 4, 5], do: nil, else: "#808080"

@@ -1,4 +1,7 @@
 defmodule TetrisGame.RoomSupervisor do
+  @moduledoc """
+  DynamicSupervisor that spawns and supervises GameRoom processes.
+  """
   use DynamicSupervisor
 
   def start_link(init_arg) do

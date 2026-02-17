@@ -1,8 +1,8 @@
 defmodule TetrisWeb.UserSocket do
   use Phoenix.Socket
 
-  channel "lobby:*", TetrisWeb.LobbyChannel
-  channel "game:*", TetrisWeb.GameChannel
+  channel("lobby:*", TetrisWeb.LobbyChannel)
+  channel("game:*", TetrisWeb.GameChannel)
 
   @impl true
   def connect(%{"nickname" => nickname}, socket, _connect_info) do

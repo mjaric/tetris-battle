@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import type { Channel } from "phoenix";
+import { useState, useEffect, useRef } from 'react';
+import type { Channel } from 'phoenix';
 
 const PING_INTERVAL_MS = 2000;
 
@@ -15,11 +15,9 @@ export function useLatency(channel: Channel | null): number | null {
 
     function sendPing() {
       const start = performance.now();
-      channel!
-        .push("ping", {})
-        .receive("ok", () => {
-          setLatency(Math.round(performance.now() - start));
-        });
+      channel!.push('ping', {}).receive('ok', () => {
+        setLatency(Math.round(performance.now() - start));
+      });
     }
 
     sendPing();

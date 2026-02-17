@@ -9,7 +9,8 @@ defmodule Tetris.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: Mix.compilers(),
-      aliases: aliases()
+      aliases: aliases(),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -36,7 +37,8 @@ defmodule Tetris.MixProject do
       {:telemetry_metrics, "~> 1.1.0"},
       {:websock_adapter, "~> 0.5.9"},
       {:mime, "~> 2.0.7"},
-      {:castore, "~> 1.0.17"}
+      {:castore, "~> 1.0.17"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 

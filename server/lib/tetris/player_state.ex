@@ -188,22 +188,19 @@ defmodule Tetris.PlayerState do
       row
       |> Enum.with_index()
       |> Enum.reduce(acc, fn {cell, sx}, acc2 ->
-        if cell == 1 do
-          bx = px + sx
-          by = py + sy
-
-          if by >= 0 and by < Board.height() and bx >= 0 and bx < Board.width() do
-            List.update_at(acc2, by, fn board_row ->
-              List.replace_at(board_row, bx, color)
-            end)
-          else
-            acc2
-          end
-        else
-          acc2
-        end
+        set_cell_if_active(acc2, cell, px + sx, py + sy, color)
       end)
     end)
+  end
+
+  defp set_cell_if_active(board, 0, _bx, _by, _color), do: board
+
+  defp set_cell_if_active(board, _cell, bx, by, color) do
+    if by >= 0 and by < Board.height() and bx >= 0 and bx < Board.width() do
+      List.update_at(board, by, &List.replace_at(&1, bx, color))
+    else
+      board
+    end
   end
 
   defp next_piece_type(nil), do: nil

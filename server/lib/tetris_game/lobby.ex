@@ -1,4 +1,7 @@
 defmodule TetrisGame.Lobby do
+  @moduledoc """
+  GenServer that tracks active game rooms across the lobby.
+  """
   use GenServer
 
   defstruct rooms: %{}

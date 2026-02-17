@@ -2,17 +2,10 @@ interface LatencyIndicatorProps {
   latency: number | null;
 }
 
-export default function LatencyIndicator({
-  latency,
-}: LatencyIndicatorProps) {
+export default function LatencyIndicator({ latency }: LatencyIndicatorProps) {
   if (latency === null) return null;
 
-  const colorClass =
-    latency < 80
-      ? "text-green"
-      : latency < 150
-        ? "text-amber"
-        : "text-red";
+  const colorClass = latency < 80 ? 'text-green' : latency < 150 ? 'text-amber' : 'text-red';
 
   return (
     <div className="mt-2 text-center text-xs">

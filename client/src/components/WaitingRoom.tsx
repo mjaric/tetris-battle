@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { Channel } from "phoenix";
-import type { GameState } from "../types.ts";
+import { useState } from 'react';
+import type { Channel } from 'phoenix';
+import type { GameState } from '../types.ts';
 
-type Difficulty = "easy" | "medium" | "hard";
+type Difficulty = 'easy' | 'medium' | 'hard' | 'battle';
 
 interface WaitingRoomProps {
   gameState: GameState | null;
@@ -12,25 +12,21 @@ interface WaitingRoomProps {
   channel: Channel | null;
 }
 
-export default function WaitingRoom({
-  gameState,
-  isHost,
-  startGame,
-  onLeave,
-  channel,
-}: WaitingRoomProps) {
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+export default function WaitingRoom({ gameState, isHost, startGame, onLeave, channel }: WaitingRoomProps) {
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const players = gameState?.players ?? {};
   const playerCount = Object.keys(players).length;
 
   function addBot() {
     if (!channel) return;
-    channel.push("add_bot", { difficulty });
+    channel.push('add_bot', { difficulty }).receive<{ reason: string }>('error', (resp) => {
+      console.error('add_bot failed:', resp.reason);
+    });
   }
 
   function removeBot(botId: string) {
     if (!channel) return;
-    channel.push("remove_bot", { bot_id: botId });
+    channel.push('remove_bot', { bot_id: botId });
   }
 
   return (
@@ -38,26 +34,15 @@ export default function WaitingRoom({
       <h2 className="mb-6 text-2xl font-bold">Waiting Room</h2>
 
       <div className="mb-6 min-w-75 rounded-lg border border-border bg-bg-secondary p-5">
-        <h3 className="mb-3 text-xs uppercase tracking-widest text-muted">
-          Players
-        </h3>
+        <h3 className="mb-3 text-xs uppercase tracking-widest text-muted">Players</h3>
         {Object.entries(players).map(([id, p]) => (
-          <div
-            key={id}
-            className="mb-1 flex items-center justify-between rounded bg-bg-tertiary px-3 py-2"
-          >
+          <div key={id} className="mb-1 flex items-center justify-between rounded bg-bg-tertiary px-3 py-2">
             <div className="flex items-center gap-2">
               <span>{p.nickname}</span>
-              {p.is_bot && (
-                <span className="rounded bg-cyan/20 px-1.5 py-0.5 text-xs text-cyan">
-                  BOT
-                </span>
-              )}
+              {p.is_bot && <span className="rounded bg-cyan/20 px-1.5 py-0.5 text-xs text-cyan">BOT</span>}
             </div>
             <div className="flex items-center gap-2">
-              {gameState && id === gameState.host && (
-                <span className="text-xs text-amber">HOST</span>
-              )}
+              {gameState && id === gameState.host && <span className="text-xs text-amber">HOST</span>}
               {isHost && p.is_bot && (
                 <button
                   onClick={() => removeBot(id)}
@@ -81,6 +66,7 @@ export default function WaitingRoom({
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
+            <option value="battle">Battle</option>
           </select>
           <button
             onClick={addBot}
@@ -103,17 +89,13 @@ export default function WaitingRoom({
             onClick={startGame}
             disabled={playerCount < 2}
             className={`rounded-lg border-none px-8 py-3 text-base font-bold text-white ${
-              playerCount >= 2
-                ? "cursor-pointer bg-green"
-                : "cursor-default bg-gray-700"
+              playerCount >= 2 ? 'cursor-pointer bg-green' : 'cursor-default bg-gray-700'
             }`}
           >
             Start Game
           </button>
         ) : (
-          <div className="py-3 text-muted">
-            Waiting for host to start...
-          </div>
+          <div className="py-3 text-muted">Waiting for host to start...</div>
         )}
       </div>
     </div>

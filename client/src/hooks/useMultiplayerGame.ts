@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import type { Channel } from "phoenix";
-import type { GameState, PlayerBroadcast } from "../types.ts";
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import type { Channel } from 'phoenix';
+import type { GameState, PlayerBroadcast } from '../types.ts';
 
-type GameStatus = GameState["status"];
+type GameStatus = GameState['status'];
 
 export interface Opponent extends PlayerBroadcast {
   id: string;
@@ -19,33 +19,27 @@ interface UseMultiplayerGameResult {
   cycleTarget: () => void;
 }
 
-export function useMultiplayerGame(
-  channel: Channel | null,
-  myPlayerId: string | null,
-): UseMultiplayerGameResult {
+export function useMultiplayerGame(channel: Channel | null, myPlayerId: string | null): UseMultiplayerGameResult {
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [status, setStatus] = useState<GameStatus>("waiting");
+  const [status, setStatus] = useState<GameStatus>('waiting');
   const targetIndexRef = useRef(0);
-  const prevStatusRef = useRef<GameStatus>("waiting");
+  const prevStatusRef = useRef<GameStatus>('waiting');
 
   useEffect(() => {
     if (!channel) return;
 
-    const ref = channel.on(
-      "game_state",
-      (payload: GameState) => {
-        setGameState(payload);
-        setStatus(payload.status);
-      },
-    );
+    const ref = channel.on('game_state', (payload: GameState) => {
+      setGameState(payload);
+      setStatus(payload.status);
+    });
 
     return () => {
-      channel.off("game_state", ref);
+      channel.off('game_state', ref);
     };
   }, [channel]);
 
   useEffect(() => {
-    if (prevStatusRef.current !== "playing" && status === "playing") {
+    if (prevStatusRef.current !== 'playing' && status === 'playing') {
       targetIndexRef.current = 0;
     }
     prevStatusRef.current = status;
@@ -53,11 +47,11 @@ export function useMultiplayerGame(
 
   const sendInput = useCallback(
     (action: string) => {
-      if (channel && status === "playing") {
-        channel.push("input", { action });
+      if (channel && status === 'playing') {
+        channel.push('input', { action });
       }
     },
-    [channel, status],
+    [channel, status]
   );
 
   const cycleTarget = useCallback(() => {
@@ -69,59 +63,56 @@ export function useMultiplayerGame(
 
     if (opponents.length === 0) return;
 
-    targetIndexRef.current =
-      (targetIndexRef.current + 1) % opponents.length;
+    targetIndexRef.current = (targetIndexRef.current + 1) % opponents.length;
     const newTarget = opponents[targetIndexRef.current];
     if (newTarget) {
-      channel.push("set_target", { target_id: newTarget });
+      channel.push('set_target', { target_id: newTarget });
     }
   }, [gameState, channel, myPlayerId]);
 
   const startGame = useCallback(() => {
     if (channel) {
-      channel.push("start_game", {});
+      channel.push('start_game', {});
     }
   }, [channel]);
 
   useEffect(() => {
-    if (status !== "playing") return;
+    if (status !== 'playing') return;
 
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
-        case "ArrowLeft":
+        case 'ArrowLeft':
           e.preventDefault();
-          sendInput("move_left");
+          sendInput('move_left');
           break;
-        case "ArrowRight":
+        case 'ArrowRight':
           e.preventDefault();
-          sendInput("move_right");
+          sendInput('move_right');
           break;
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
-          sendInput("move_down");
+          sendInput('move_down');
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
-          sendInput("rotate");
+          sendInput('rotate');
           break;
-        case " ":
+        case ' ':
           e.preventDefault();
-          sendInput("hard_drop");
+          sendInput('hard_drop');
           break;
-        case "Tab":
+        case 'Tab':
           e.preventDefault();
           cycleTarget();
           break;
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [status, sendInput, cycleTarget]);
 
-  const myState = myPlayerId
-    ? gameState?.players[myPlayerId] ?? null
-    : null;
+  const myState = myPlayerId ? (gameState?.players[myPlayerId] ?? null) : null;
 
   const opponents = useMemo<Opponent[]>(() => {
     if (!gameState || !myPlayerId) return [];
@@ -130,9 +121,7 @@ export function useMultiplayerGame(
       .map(([id, p]) => ({ id, ...p }));
   }, [gameState, myPlayerId]);
 
-  const isHost = Boolean(
-    myPlayerId && gameState && gameState.host === myPlayerId,
-  );
+  const isHost = Boolean(myPlayerId && gameState && gameState.host === myPlayerId);
 
   return {
     gameState,

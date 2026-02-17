@@ -13,7 +13,7 @@ export interface PlayerBroadcast {
 
 export interface GameState {
   tick: number;
-  status: "waiting" | "playing" | "finished";
+  status: 'waiting' | 'playing' | 'finished';
   players: Record<string, PlayerBroadcast>;
   eliminated_order: string[];
   host: string;
@@ -25,5 +25,5 @@ export interface RoomInfo {
   host: string;
   max_players: number;
   player_count: number;
-  status: "waiting" | "playing" | "finished";
+  status: 'waiting' | 'playing' | 'finished';
 }
