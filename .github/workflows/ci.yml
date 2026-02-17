@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      client_changed: ${{ steps.diff.outputs.client_changed }}
+      server_changed: ${{ steps.diff.outputs.server_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed folders
+        id: diff
+        run: |
+          git fetch origin main
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -q '^client/'; then
+            echo "client_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "client_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$CHANGED" | grep -q '^server/'; then
+            echo "server_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "server_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  client-checks:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.client_changed == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting (Prettier)
+        run: npm run format:check
+
+      - name: Lint (Oxlint)
+        run: npm run lint
+
+      - name: TypeScript + build
+        run: npm run build
+
+  server-checks:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.server_changed == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18.1'
+          otp-version: '27.2'
+
+      - name: Cache Mix deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            server/deps
+            server/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('server/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Check formatting (mix format)
+        run: mix format --check-formatted
+
+      - name: Lint (Credo)
+        run: mix credo --strict
+
+      - name: Run tests
+        run: mix test
