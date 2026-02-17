@@ -175,12 +175,34 @@ defmodule Mix.Tasks.Bot.Evolve do
   end
 
   defp local_hostname do
-    {:ok, hostname} = :inet.gethostname()
-    fqdn = to_string(hostname)
+    case local_lan_ip() do
+      {:ok, ip} -> ip
+      :error -> "127.0.0.1"
+    end
+  end
 
-    case :inet.getaddr(~c"#{fqdn}", :inet) do
-      {:ok, _} -> fqdn
-      _ -> "127.0.0.1"
+  defp local_lan_ip do
+    with {:ok, ifaddrs} <- :inet.getifaddrs() do
+      result =
+        ifaddrs
+        |> Enum.flat_map(fn {_name, opts} ->
+          flags = Keyword.get(opts, :flags, [])
+
+          if :up in flags and :running in flags and
+               :loopback not in flags do
+            opts
+            |> Keyword.get_values(:addr)
+            |> Enum.filter(&(tuple_size(&1) == 4))
+          else
+            []
+          end
+        end)
+        |> List.first()
+
+      case result do
+        nil -> :error
+        ip -> {:ok, ip |> :inet.ntoa() |> to_string()}
+      end
     end
   end
 

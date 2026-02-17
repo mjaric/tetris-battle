@@ -28,6 +28,8 @@ defmodule BotTrainer.Cluster do
       Node.set_cookie(cookie)
       :ok
     else
+      ensure_epmd()
+
       case Node.start(node_name, :longnames) do
         {:ok, _pid} ->
           Node.set_cookie(cookie)
@@ -37,6 +39,15 @@ defmodule BotTrainer.Cluster do
           {:error, reason}
       end
     end
+  end
+
+  defp ensure_epmd do
+    case System.cmd("epmd", ["-daemon"], stderr_to_stdout: true) do
+      {_, 0} -> :ok
+      _ -> :ok
+    end
+  rescue
+    _ -> :ok
   end
 
   @doc """
