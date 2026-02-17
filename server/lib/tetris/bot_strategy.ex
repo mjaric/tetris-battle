@@ -10,7 +10,15 @@ defmodule Tetris.BotStrategy do
   alias Tetris.BoardAnalysis
   alias Tetris.Piece
 
-  @type difficulty :: :easy | :medium | :hard
+  @type difficulty :: :easy | :medium | :hard | :battle
+
+  @board_height 20
+
+  @battle_weight_keys [
+    :height, :holes, :bumpiness, :lines, :max_height, :wells,
+    :garbage_incoming, :garbage_send, :tetris_bonus,
+    :opponent_danger, :survival, :line_efficiency
+  ]
 
   @default_weights %{
     easy: %{
@@ -27,7 +35,7 @@ defmodule Tetris.BotStrategy do
     }
   }
 
-  @noise %{easy: 0.20, medium: 0.05, hard: 0.0}
+  @noise %{easy: 0.20, medium: 0.05, hard: 0.0, battle: 0.0}
 
   @doc """
   Returns heuristic weights for the given difficulty.
@@ -40,6 +48,13 @@ defmodule Tetris.BotStrategy do
     case load_evolved_weights() do
       {:ok, weights} -> weights
       :error -> @default_weights[:hard]
+    end
+  end
+
+  def weights_for(:battle) do
+    case load_battle_weights() do
+      {:ok, weights} -> weights
+      :error -> default_battle_weights()
     end
   end
 
@@ -98,6 +113,40 @@ defmodule Tetris.BotStrategy do
       weights.lines * metrics.complete_lines -
       Map.get(weights, :max_height, 0.0) * Map.get(metrics, :max_height, 0) -
       Map.get(weights, :wells, 0.0) * Map.get(metrics, :well_sum, 0)
+  end
+
+  @doc """
+  Scores a placement for battle mode with multiplayer context.
+
+  Extends `score_placement/2` with garbage awareness, attack
+  incentives, survival pressure, and line-clear efficiency.
+  """
+  @spec score_battle_placement(map(), map(), map()) :: float()
+  def score_battle_placement(metrics, weights, battle_ctx) do
+    base = score_placement(metrics, weights)
+
+    own_height_ratio =
+      battle_ctx.own_max_height / @board_height
+
+    avg_opp_height_ratio =
+      case battle_ctx.opponent_max_heights do
+        [] -> 0.0
+        heights ->
+          Enum.sum(heights) / (length(heights) * @board_height)
+      end
+
+    lines = metrics.complete_lines
+    sends_garbage = if lines >= 2, do: 1.0, else: 0.0
+    is_tetris = if lines == 4, do: 1.0, else: 0.0
+
+    garbage_in = weights.garbage_incoming * battle_ctx.pending_garbage_count * own_height_ratio
+    garbage_out = weights.garbage_send * lines * sends_garbage
+    tetris = weights.tetris_bonus * is_tetris
+    opp_danger = weights.opponent_danger * avg_opp_height_ratio
+    surv = weights.survival * own_height_ratio * own_height_ratio
+    line_eff = weights.line_efficiency * lines * lines
+
+    base - garbage_in + garbage_out + tetris + opp_danger - surv + line_eff
   end
 
   @doc """
@@ -214,6 +263,34 @@ defmodule Tetris.BotStrategy do
       [] -> 0
       indices -> Enum.max(indices) - Enum.min(indices) + 1
     end)
+  end
+
+  defp default_battle_weights do
+    %{
+      height: 0.15, holes: 0.15, bumpiness: 0.08,
+      lines: 0.10, max_height: 0.05, wells: 0.05,
+      garbage_incoming: 0.10, garbage_send: 0.08,
+      tetris_bonus: 0.08, opponent_danger: 0.06,
+      survival: 0.06, line_efficiency: 0.04
+    }
+  end
+
+  defp load_battle_weights do
+    path =
+      :code.priv_dir(:tetris)
+      |> to_string()
+      |> Path.join("battle_weights.json")
+
+    with {:ok, contents} <- File.read(path),
+         {:ok, data} <- Jason.decode(contents),
+         %{"weights" => w} <- data do
+      {:ok,
+       Map.new(@battle_weight_keys, fn key ->
+         {key, w[Atom.to_string(key)] || 0.0}
+       end)}
+    else
+      _ -> :error
+    end
   end
 
   defp load_evolved_weights do

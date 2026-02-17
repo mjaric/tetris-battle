@@ -120,6 +120,134 @@ defmodule Tetris.BotStrategyTest do
     end
   end
 
+  describe "score_battle_placement/3" do
+    @battle_weights %{
+      height: 0.2, holes: 0.2, bumpiness: 0.1,
+      lines: 0.1, max_height: 0.05, wells: 0.05,
+      garbage_incoming: 0.1, garbage_send: 0.05,
+      tetris_bonus: 0.05, opponent_danger: 0.05,
+      survival: 0.03, line_efficiency: 0.02
+    }
+
+    test "penalizes high placements when garbage is pending" do
+      ctx_no_garbage = %{
+        pending_garbage_count: 0,
+        own_max_height: 10,
+        opponent_max_heights: [5],
+        opponent_count: 1,
+        leading_opponent_score: 100
+      }
+
+      ctx_with_garbage = %{
+        pending_garbage_count: 4,
+        own_max_height: 10,
+        opponent_max_heights: [5],
+        opponent_count: 1,
+        leading_opponent_score: 100
+      }
+
+      metrics = %{
+        aggregate_height: 40,
+        holes: 2,
+        bumpiness: 5,
+        complete_lines: 0,
+        max_height: 10,
+        well_sum: 3
+      }
+
+      score_safe = BotStrategy.score_battle_placement(
+        metrics, @battle_weights, ctx_no_garbage
+      )
+      score_danger = BotStrategy.score_battle_placement(
+        metrics, @battle_weights, ctx_with_garbage
+      )
+
+      assert score_safe > score_danger
+    end
+
+    test "rewards multi-line clears when opponents are tall" do
+      ctx = %{
+        pending_garbage_count: 0,
+        own_max_height: 5,
+        opponent_max_heights: [16, 14],
+        opponent_count: 2,
+        leading_opponent_score: 500
+      }
+
+      single = %{
+        aggregate_height: 20,
+        holes: 1,
+        bumpiness: 3,
+        complete_lines: 1,
+        max_height: 5,
+        well_sum: 2
+      }
+
+      tetris = %{
+        aggregate_height: 16,
+        holes: 1,
+        bumpiness: 3,
+        complete_lines: 4,
+        max_height: 4,
+        well_sum: 2
+      }
+
+      score_single = BotStrategy.score_battle_placement(
+        single, @battle_weights, ctx
+      )
+      score_tetris = BotStrategy.score_battle_placement(
+        tetris, @battle_weights, ctx
+      )
+
+      assert score_tetris > score_single
+    end
+
+    test "increases survival penalty as board fills up" do
+      ctx_high = %{
+        pending_garbage_count: 0,
+        own_max_height: 18,
+        opponent_max_heights: [5],
+        opponent_count: 1,
+        leading_opponent_score: 100
+      }
+
+      ctx_low = %{
+        pending_garbage_count: 0,
+        own_max_height: 5,
+        opponent_max_heights: [5],
+        opponent_count: 1,
+        leading_opponent_score: 100
+      }
+
+      metrics_high = %{
+        aggregate_height: 80,
+        holes: 2,
+        bumpiness: 5,
+        complete_lines: 0,
+        max_height: 18,
+        well_sum: 3
+      }
+
+      metrics_low = %{
+        aggregate_height: 20,
+        holes: 2,
+        bumpiness: 5,
+        complete_lines: 0,
+        max_height: 5,
+        well_sum: 3
+      }
+
+      score_high = BotStrategy.score_battle_placement(
+        metrics_high, @battle_weights, ctx_high
+      )
+      score_low = BotStrategy.score_battle_placement(
+        metrics_low, @battle_weights, ctx_low
+      )
+
+      assert score_low > score_high
+    end
+  end
+
   describe "best_placement/5" do
     test "returns valid actions for easy difficulty" do
       board = Board.new()
