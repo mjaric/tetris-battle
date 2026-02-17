@@ -3,8 +3,7 @@ import Config
 config :tetris, TetrisWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
-  secret_key_base:
-    "dev_secret_key_base_that_is_at_least_64_bytes_long_for_phoenix_to_accept_it_as_valid",
+  secret_key_base: "dev_secret_key_base_that_is_at_least_64_bytes_long_for_phoenix_to_accept_it_as_valid",
   watchers: []
 
 config :logger, :console, format: "[$level] $message\n"

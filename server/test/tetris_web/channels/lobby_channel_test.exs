@@ -24,24 +24,24 @@ defmodule TetrisWeb.LobbyChannelTest do
 
   test "list_rooms returns rooms list", %{socket: socket} do
     ref = push(socket, "list_rooms", %{})
-    assert_reply ref, :ok, %{rooms: rooms}
+    assert_reply(ref, :ok, %{rooms: rooms})
     assert is_list(rooms)
   end
 
   test "create_room creates a room and broadcasts", %{socket: socket} do
     ref = push(socket, "create_room", %{"name" => "My Room", "max_players" => 4})
-    assert_reply ref, :ok, %{room_id: room_id}
+    assert_reply(ref, :ok, %{room_id: room_id})
     assert is_binary(room_id)
 
-    assert_broadcast "room_created", %{room_id: ^room_id, name: "My Room"}
+    assert_broadcast("room_created", %{room_id: ^room_id, name: "My Room"})
   end
 
   test "list_rooms returns created rooms", %{socket: socket} do
     ref = push(socket, "create_room", %{"name" => "Listed Room", "max_players" => 2})
-    assert_reply ref, :ok, %{room_id: _room_id}
+    assert_reply(ref, :ok, %{room_id: _room_id})
 
     ref = push(socket, "list_rooms", %{})
-    assert_reply ref, :ok, %{rooms: rooms}
+    assert_reply(ref, :ok, %{rooms: rooms})
     assert length(rooms) >= 1
   end
 end

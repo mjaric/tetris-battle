@@ -34,8 +34,7 @@ defmodule TetrisWeb.LobbyChannel do
           %{room_id: room_id, name: opts.name}
         )
 
-        {:reply,
-         {:ok, %{room_id: room_id, is_host: true}}, socket}
+        {:reply, {:ok, %{room_id: room_id, is_host: true}}, socket}
 
       {:error, reason} ->
         {:reply, {:error, %{reason: to_string(reason)}}, socket}

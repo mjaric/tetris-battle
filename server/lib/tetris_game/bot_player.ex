@@ -55,9 +55,7 @@ defmodule TetrisGame.BotPlayer do
       last_piece_id: nil
     }
 
-    Logger.debug(
-      "[Bot] #{nickname} (#{difficulty}) initialized in room #{room_id}"
-    )
+    Logger.debug("[Bot] #{nickname} (#{difficulty}) initialized in room #{room_id}")
 
     {:ok, state}
   end
@@ -201,8 +199,11 @@ defmodule TetrisGame.BotPlayer do
         maybe_set_target(room, room_state, state)
 
         timing = @timing[:battle]
+
         Process.send_after(
-          self(), :execute_action, timing.action_interval
+          self(),
+          :execute_action,
+          timing.action_interval
         )
 
         {:noreply, %{state | phase: :executing, action_queue: actions}}

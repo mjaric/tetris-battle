@@ -6,8 +6,7 @@ config :tetris, TetrisWeb.Endpoint,
   pubsub_server: Tetris.PubSub,
   server: true
 
-config :tetris, :generators,
-  migration: false
+config :tetris, :generators, migration: false
 
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

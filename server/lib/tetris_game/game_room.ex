@@ -454,8 +454,7 @@ defmodule TetrisGame.GameRoom do
             %{
               state
               | players: Map.delete(state.players, bot_id),
-                player_order:
-                  List.delete(state.player_order, bot_id),
+                player_order: List.delete(state.player_order, bot_id),
                 bot_ids: MapSet.delete(state.bot_ids, bot_id),
                 bot_pids: Map.delete(state.bot_pids, bot_id)
             }
@@ -497,9 +496,7 @@ defmodule TetrisGame.GameRoom do
     all_garbage_events = garbage_events_from_input ++ garbage_events_from_gravity
 
     if all_garbage_events != [] do
-      Logger.debug(
-        "[Garbage] events=#{inspect(all_garbage_events)}"
-      )
+      Logger.debug("[Garbage] events=#{inspect(all_garbage_events)}")
     end
 
     # 5. Distribute garbage
@@ -511,9 +508,7 @@ defmodule TetrisGame.GameRoom do
           {pid, length(p.pending_garbage)}
         end)
 
-      Logger.debug(
-        "[Garbage] pending after distribute: #{inspect(pending_summary)}"
-      )
+      Logger.debug("[Garbage] pending after distribute: #{inspect(pending_summary)}")
     end
 
     # 5b. Apply pending garbage immediately

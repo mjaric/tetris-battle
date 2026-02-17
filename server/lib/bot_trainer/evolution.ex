@@ -12,13 +12,27 @@ defmodule BotTrainer.Evolution do
   alias BotTrainer.Simulation
 
   @weight_keys [
-    :height, :holes, :bumpiness, :lines, :max_height, :wells
+    :height,
+    :holes,
+    :bumpiness,
+    :lines,
+    :max_height,
+    :wells
   ]
 
   @battle_weight_keys [
-    :height, :holes, :bumpiness, :lines, :max_height, :wells,
-    :garbage_incoming, :garbage_send, :tetris_bonus,
-    :opponent_danger, :survival, :line_efficiency
+    :height,
+    :holes,
+    :bumpiness,
+    :lines,
+    :max_height,
+    :wells,
+    :garbage_incoming,
+    :garbage_send,
+    :tetris_bonus,
+    :opponent_danger,
+    :survival,
+    :line_efficiency
   ]
 
   @type genome :: %{
@@ -257,7 +271,12 @@ defmodule BotTrainer.Evolution do
     }
 
     evolve_battle_loop(
-      population, config, on_generation, solo_hard, adaptor, 1
+      population,
+      config,
+      on_generation,
+      solo_hard,
+      adaptor,
+      1
     )
   end
 
@@ -340,8 +359,12 @@ defmodule BotTrainer.Evolution do
   # -----------------------------------------------------------
 
   defp evolve_battle_loop(
-         population, config, _on_generation,
-         solo_hard, adaptor, gen
+         population,
+         config,
+         _on_generation,
+         solo_hard,
+         adaptor,
+         gen
        )
        when gen > config.generations do
     sim_opts = sim_opts(config)
@@ -349,7 +372,10 @@ defmodule BotTrainer.Evolution do
 
     scored =
       evaluate_battle_population(
-        population, opponents, config, sim_opts
+        population,
+        opponents,
+        config,
+        sim_opts
       )
 
     case scored do
@@ -359,15 +385,22 @@ defmodule BotTrainer.Evolution do
   end
 
   defp evolve_battle_loop(
-         population, config, on_generation,
-         solo_hard, adaptor, gen
+         population,
+         config,
+         on_generation,
+         solo_hard,
+         adaptor,
+         gen
        ) do
     sim_opts = sim_opts(config)
     opponents = build_opponents(adaptor, solo_hard)
 
     scored =
       evaluate_battle_population(
-        population, opponents, config, sim_opts
+        population,
+        opponents,
+        config,
+        sim_opts
       )
 
     fitnesses = Enum.map(scored, fn {f, _} -> f end)
@@ -386,7 +419,10 @@ defmodule BotTrainer.Evolution do
 
     adaptor =
       update_adaptor(
-        adaptor, best_fitness, best_genome, config
+        adaptor,
+        best_fitness,
+        best_genome,
+        config
       )
 
     elites =
@@ -430,7 +466,11 @@ defmodule BotTrainer.Evolution do
     next_pop = elites ++ children ++ immigrants
 
     evolve_battle_loop(
-      next_pop, config, on_generation, solo_hard, adaptor,
+      next_pop,
+      config,
+      on_generation,
+      solo_hard,
+      adaptor,
       gen + 1
     )
   end
@@ -440,7 +480,10 @@ defmodule BotTrainer.Evolution do
   # -----------------------------------------------------------
 
   defp evaluate_battle_population(
-         genomes, opponents, config, sim_opts
+         genomes,
+         opponents,
+         config,
+         sim_opts
        ) do
     nodes = BotTrainer.Cluster.available_nodes()
     node_count = length(nodes)
@@ -568,10 +611,15 @@ defmodule BotTrainer.Evolution do
   defp load_solo_hard_weights do
     Tetris.BotStrategy.weights_for(:hard)
   rescue
-    _ -> %{
-      height: 0.51, holes: 0.36, bumpiness: 0.18,
-      lines: 0.76, max_height: 0.0, wells: 0.0
-    }
+    _ ->
+      %{
+        height: 0.51,
+        holes: 0.36,
+        bumpiness: 0.18,
+        lines: 0.76,
+        max_height: 0.0,
+        wells: 0.0
+      }
   end
 
   # -----------------------------------------------------------

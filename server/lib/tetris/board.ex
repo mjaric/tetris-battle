@@ -54,10 +54,10 @@ defmodule Tetris.Board do
           by = py + sy
 
           # x must be in bounds
+          # y must be below the ceiling
+          # if y is negative (above board), it's valid (spawn area)
           bx >= 0 and bx < @width and
-            # y must be below the ceiling
             by < @height and
-            # if y is negative (above board), it's valid (spawn area)
             (by < 0 or cell_empty?(board, bx, by))
         else
           true

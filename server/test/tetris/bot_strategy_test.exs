@@ -122,11 +122,18 @@ defmodule Tetris.BotStrategyTest do
 
   describe "score_battle_placement/3" do
     @battle_weights %{
-      height: 0.2, holes: 0.2, bumpiness: 0.1,
-      lines: 0.1, max_height: 0.05, wells: 0.05,
-      garbage_incoming: 0.1, garbage_send: 0.05,
-      tetris_bonus: 0.05, opponent_danger: 0.05,
-      survival: 0.03, line_efficiency: 0.02
+      height: 0.2,
+      holes: 0.2,
+      bumpiness: 0.1,
+      lines: 0.1,
+      max_height: 0.05,
+      wells: 0.05,
+      garbage_incoming: 0.1,
+      garbage_send: 0.05,
+      tetris_bonus: 0.05,
+      opponent_danger: 0.05,
+      survival: 0.03,
+      line_efficiency: 0.02
     }
 
     test "penalizes high placements when garbage is pending" do
@@ -155,12 +162,19 @@ defmodule Tetris.BotStrategyTest do
         well_sum: 3
       }
 
-      score_safe = BotStrategy.score_battle_placement(
-        metrics, @battle_weights, ctx_no_garbage
-      )
-      score_danger = BotStrategy.score_battle_placement(
-        metrics, @battle_weights, ctx_with_garbage
-      )
+      score_safe =
+        BotStrategy.score_battle_placement(
+          metrics,
+          @battle_weights,
+          ctx_no_garbage
+        )
+
+      score_danger =
+        BotStrategy.score_battle_placement(
+          metrics,
+          @battle_weights,
+          ctx_with_garbage
+        )
 
       assert score_safe > score_danger
     end
@@ -192,12 +206,19 @@ defmodule Tetris.BotStrategyTest do
         well_sum: 2
       }
 
-      score_single = BotStrategy.score_battle_placement(
-        single, @battle_weights, ctx
-      )
-      score_tetris = BotStrategy.score_battle_placement(
-        tetris, @battle_weights, ctx
-      )
+      score_single =
+        BotStrategy.score_battle_placement(
+          single,
+          @battle_weights,
+          ctx
+        )
+
+      score_tetris =
+        BotStrategy.score_battle_placement(
+          tetris,
+          @battle_weights,
+          ctx
+        )
 
       assert score_tetris > score_single
     end
@@ -237,12 +258,19 @@ defmodule Tetris.BotStrategyTest do
         well_sum: 3
       }
 
-      score_high = BotStrategy.score_battle_placement(
-        metrics_high, @battle_weights, ctx_high
-      )
-      score_low = BotStrategy.score_battle_placement(
-        metrics_low, @battle_weights, ctx_low
-      )
+      score_high =
+        BotStrategy.score_battle_placement(
+          metrics_high,
+          @battle_weights,
+          ctx_high
+        )
+
+      score_low =
+        BotStrategy.score_battle_placement(
+          metrics_low,
+          @battle_weights,
+          ctx_low
+        )
 
       assert score_low > score_high
     end
@@ -264,7 +292,12 @@ defmodule Tetris.BotStrategyTest do
 
       {rot, x, actions} =
         BotStrategy.best_placement(
-          board, piece, {3, 0}, next, :battle, battle_ctx
+          board,
+          piece,
+          {3, 0},
+          next,
+          :battle,
+          battle_ctx
         )
 
       assert is_integer(rot) and rot in 0..3
@@ -273,8 +306,8 @@ defmodule Tetris.BotStrategyTest do
       assert List.last(actions) == "hard_drop"
 
       assert Enum.all?(actions, fn a ->
-        a in ["rotate", "move_left", "move_right", "hard_drop"]
-      end)
+               a in ["rotate", "move_left", "move_right", "hard_drop"]
+             end)
     end
 
     test "5-arg best_placement still works for non-battle" do

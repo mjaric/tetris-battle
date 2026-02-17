@@ -33,10 +33,10 @@ defmodule TetrisGame.BotPlayerTest do
       bot = state.players[bot_id]
 
       assert bot.alive,
-        "bot should still be alive after 3 seconds"
+             "bot should still be alive after 3 seconds"
 
       assert bot.pieces_placed > 3,
-        "bot should have placed multiple pieces, got #{bot.pieces_placed}"
+             "bot should have placed multiple pieces, got #{bot.pieces_placed}"
 
       # The bot board should have blocks in varied columns,
       # not just stacked in the center
@@ -51,8 +51,8 @@ defmodule TetrisGame.BotPlayerTest do
         |> Enum.uniq()
 
       assert length(occupied_columns) >= 3,
-        "bot should place pieces in at least 3 different columns, " <>
-          "got #{inspect(occupied_columns)}"
+             "bot should place pieces in at least 3 different columns, " <>
+               "got #{inspect(occupied_columns)}"
     end
 
     test "bot clears lines during gameplay", %{pid: pid} do
@@ -67,8 +67,8 @@ defmodule TetrisGame.BotPlayerTest do
 
       if bot.alive do
         assert bot.lines > 0,
-          "hard bot should clear at least 1 line in 8 seconds, " <>
-            "got #{bot.lines} lines, #{bot.pieces_placed} pieces placed"
+               "hard bot should clear at least 1 line in 8 seconds, " <>
+                 "got #{bot.lines} lines, #{bot.pieces_placed} pieces placed"
       end
     end
   end
@@ -172,11 +172,11 @@ defmodule TetrisGame.BotPlayerTest do
       bot = state.players[bot_id]
 
       assert bot.alive,
-        "battle bot should still be alive after 3 seconds"
+             "battle bot should still be alive after 3 seconds"
 
       assert bot.pieces_placed > 3,
-        "battle bot should have placed multiple pieces, " <>
-          "got #{bot.pieces_placed}"
+             "battle bot should have placed multiple pieces, " <>
+               "got #{bot.pieces_placed}"
     end
   end
 end

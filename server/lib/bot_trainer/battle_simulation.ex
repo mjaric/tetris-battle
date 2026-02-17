@@ -185,7 +185,10 @@ defmodule BotTrainer.BattleSimulation do
       Enum.max_by(top_k, fn {greedy_score, pl} ->
         greedy_score +
           best_next_battle_score(
-            pl.resulting_board, player.next_piece, player.weights, ctx
+            pl.resulting_board,
+            player.next_piece,
+            player.weights,
+            ctx
           )
       end)
 
@@ -221,7 +224,9 @@ defmodule BotTrainer.BattleSimulation do
       Enum.max_by(top_k, fn {greedy_score, pl} ->
         greedy_score +
           best_next_solo_score(
-            pl.resulting_board, player.next_piece, player.weights
+            pl.resulting_board,
+            player.next_piece,
+            player.weights
           )
       end)
 

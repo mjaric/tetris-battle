@@ -38,8 +38,12 @@ defmodule BotTrainer.EvolutionTest do
   describe "normalize/1" do
     test "scales weights to sum to 1.0" do
       genome = %{
-        height: 2.0, holes: 3.0, bumpiness: 1.0,
-        lines: 4.0, max_height: 0.0, wells: 0.0
+        height: 2.0,
+        holes: 3.0,
+        bumpiness: 1.0,
+        lines: 4.0,
+        max_height: 0.0,
+        wells: 0.0
       }
 
       normalized = Evolution.normalize(genome)
@@ -55,8 +59,12 @@ defmodule BotTrainer.EvolutionTest do
 
     test "handles all-zero edge case" do
       genome = %{
-        height: 0.0, holes: 0.0, bumpiness: 0.0,
-        lines: 0.0, max_height: 0.0, wells: 0.0
+        height: 0.0,
+        holes: 0.0,
+        bumpiness: 0.0,
+        lines: 0.0,
+        max_height: 0.0,
+        wells: 0.0
       }
 
       normalized = Evolution.normalize(genome)
@@ -71,13 +79,21 @@ defmodule BotTrainer.EvolutionTest do
   describe "crossover/2" do
     test "child weights come from one of the parents" do
       a = %{
-        height: 0.1, holes: 0.2, bumpiness: 0.3,
-        lines: 0.4, max_height: 0.05, wells: 0.15
+        height: 0.1,
+        holes: 0.2,
+        bumpiness: 0.3,
+        lines: 0.4,
+        max_height: 0.05,
+        wells: 0.15
       }
 
       b = %{
-        height: 0.5, holes: 0.6, bumpiness: 0.7,
-        lines: 0.8, max_height: 0.35, wells: 0.45
+        height: 0.5,
+        holes: 0.6,
+        bumpiness: 0.7,
+        lines: 0.8,
+        max_height: 0.35,
+        wells: 0.45
       }
 
       child = Evolution.crossover(a, b)
@@ -91,8 +107,12 @@ defmodule BotTrainer.EvolutionTest do
   describe "mutate/3" do
     test "with rate 0 returns identical genome" do
       genome = %{
-        height: 0.2, holes: 0.2, bumpiness: 0.2,
-        lines: 0.2, max_height: 0.1, wells: 0.1
+        height: 0.2,
+        holes: 0.2,
+        bumpiness: 0.2,
+        lines: 0.2,
+        max_height: 0.1,
+        wells: 0.1
       }
 
       mutated = Evolution.mutate(genome, 0.0, 0.1)
@@ -101,8 +121,12 @@ defmodule BotTrainer.EvolutionTest do
 
     test "with rate 1 modifies weights" do
       genome = %{
-        height: 0.5, holes: 0.5, bumpiness: 0.5,
-        lines: 0.5, max_height: 0.5, wells: 0.5
+        height: 0.5,
+        holes: 0.5,
+        bumpiness: 0.5,
+        lines: 0.5,
+        max_height: 0.5,
+        wells: 0.5
       }
 
       any_changed =
@@ -116,8 +140,12 @@ defmodule BotTrainer.EvolutionTest do
 
     test "clamps values to [0, 1]" do
       genome = %{
-        height: 0.01, holes: 0.99, bumpiness: 0.5,
-        lines: 0.5, max_height: 0.01, wells: 0.99
+        height: 0.01,
+        holes: 0.99,
+        bumpiness: 0.5,
+        lines: 0.5,
+        max_height: 0.01,
+        wells: 0.99
       }
 
       for _ <- 1..50 do
@@ -180,9 +208,18 @@ defmodule BotTrainer.EvolutionTest do
   end
 
   @battle_weights [
-    :height, :holes, :bumpiness, :lines, :max_height, :wells,
-    :garbage_incoming, :garbage_send, :tetris_bonus,
-    :opponent_danger, :survival, :line_efficiency
+    :height,
+    :holes,
+    :bumpiness,
+    :lines,
+    :max_height,
+    :wells,
+    :garbage_incoming,
+    :garbage_send,
+    :tetris_bonus,
+    :opponent_danger,
+    :survival,
+    :line_efficiency
   ]
 
   describe "normalize_keys/2" do

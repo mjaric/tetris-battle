@@ -4,8 +4,12 @@ defmodule BotTrainer.SimulationTest do
   alias BotTrainer.Simulation
 
   @good_weights %{
-    height: 0.51, holes: 0.36, bumpiness: 0.18,
-    lines: 0.76, max_height: 0.0, wells: 0.0
+    height: 0.51,
+    holes: 0.36,
+    bumpiness: 0.18,
+    lines: 0.76,
+    max_height: 0.0,
+    wells: 0.0
   }
 
   # Tests use lookahead: false for speed.
@@ -25,8 +29,12 @@ defmodule BotTrainer.SimulationTest do
 
     test "terminates with zero weights" do
       weights = %{
-        height: 0.0, holes: 0.0, bumpiness: 0.0,
-        lines: 0.0, max_height: 0.0, wells: 0.0
+        height: 0.0,
+        holes: 0.0,
+        bumpiness: 0.0,
+        lines: 0.0,
+        max_height: 0.0,
+        wells: 0.0
       }
 
       result = Simulation.play_game(weights, lookahead: false)
@@ -37,8 +45,12 @@ defmodule BotTrainer.SimulationTest do
 
     test "better weights tend to outperform bad weights" do
       bad = %{
-        height: 0.0, holes: 0.0, bumpiness: 0.0,
-        lines: 1.0, max_height: 0.0, wells: 0.0
+        height: 0.0,
+        holes: 0.0,
+        bumpiness: 0.0,
+        lines: 1.0,
+        max_height: 0.0,
+        wells: 0.0
       }
 
       good_avg = Simulation.evaluate(@good_weights, 5, lookahead: false)

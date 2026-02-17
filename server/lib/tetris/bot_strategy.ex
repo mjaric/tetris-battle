@@ -15,23 +15,44 @@ defmodule Tetris.BotStrategy do
   @board_height 20
 
   @battle_weight_keys [
-    :height, :holes, :bumpiness, :lines, :max_height, :wells,
-    :garbage_incoming, :garbage_send, :tetris_bonus,
-    :opponent_danger, :survival, :line_efficiency
+    :height,
+    :holes,
+    :bumpiness,
+    :lines,
+    :max_height,
+    :wells,
+    :garbage_incoming,
+    :garbage_send,
+    :tetris_bonus,
+    :opponent_danger,
+    :survival,
+    :line_efficiency
   ]
 
   @default_weights %{
     easy: %{
-      height: 0.30, holes: 0.50, bumpiness: 0.20,
-      lines: 0.50, max_height: 0.0, wells: 0.0
+      height: 0.30,
+      holes: 0.50,
+      bumpiness: 0.20,
+      lines: 0.50,
+      max_height: 0.0,
+      wells: 0.0
     },
     medium: %{
-      height: 0.51, holes: 0.36, bumpiness: 0.18,
-      lines: 0.76, max_height: 0.0, wells: 0.0
+      height: 0.51,
+      holes: 0.36,
+      bumpiness: 0.18,
+      lines: 0.76,
+      max_height: 0.0,
+      wells: 0.0
     },
     hard: %{
-      height: 0.51, holes: 0.36, bumpiness: 0.18,
-      lines: 0.76, max_height: 0.0, wells: 0.0
+      height: 0.51,
+      holes: 0.36,
+      bumpiness: 0.18,
+      lines: 0.76,
+      max_height: 0.0,
+      wells: 0.0
     }
   }
 
@@ -76,7 +97,12 @@ defmodule Tetris.BotStrategy do
           map()
         ) :: {non_neg_integer(), integer(), [String.t()]}
   def best_placement(
-        board, piece, spawn_pos, next_piece, :battle, battle_ctx
+        board,
+        piece,
+        spawn_pos,
+        next_piece,
+        :battle,
+        battle_ctx
       ) do
     placements = enumerate_placements(board, piece)
     weights = weights_for(:battle)
@@ -84,7 +110,10 @@ defmodule Tetris.BotStrategy do
     scored =
       if next_piece != nil do
         score_battle_with_lookahead(
-          placements, next_piece, weights, battle_ctx
+          placements,
+          next_piece,
+          weights,
+          battle_ctx
         )
       else
         Enum.map(placements, fn pl ->
@@ -174,7 +203,9 @@ defmodule Tetris.BotStrategy do
 
     avg_opp_height_ratio =
       case battle_ctx.opponent_max_heights do
-        [] -> 0.0
+        [] ->
+          0.0
+
         heights ->
           Enum.sum(heights) / (length(heights) * @board_height)
       end
@@ -341,11 +372,18 @@ defmodule Tetris.BotStrategy do
 
   defp default_battle_weights do
     %{
-      height: 0.15, holes: 0.15, bumpiness: 0.08,
-      lines: 0.10, max_height: 0.05, wells: 0.05,
-      garbage_incoming: 0.10, garbage_send: 0.08,
-      tetris_bonus: 0.08, opponent_danger: 0.06,
-      survival: 0.06, line_efficiency: 0.04
+      height: 0.15,
+      holes: 0.15,
+      bumpiness: 0.08,
+      lines: 0.10,
+      max_height: 0.05,
+      wells: 0.05,
+      garbage_incoming: 0.10,
+      garbage_send: 0.08,
+      tetris_bonus: 0.08,
+      opponent_danger: 0.06,
+      survival: 0.06,
+      line_efficiency: 0.04
     }
   end
 

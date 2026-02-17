@@ -165,6 +165,5 @@ defmodule TetrisGame.LobbyTest do
           :ok
       end
     end
-
   end
 end

@@ -35,7 +35,6 @@ defmodule TetrisGame.GameRoomTest do
       pid = GenServer.whereis(GameRoom.via(room_id))
       assert is_pid(pid)
     end
-
   end
 
   describe "join/3" do
@@ -311,7 +310,7 @@ defmodule TetrisGame.GameRoomTest do
         end)
 
       assert has_pending or has_garbage_on_board,
-        "p2 should have garbage (pending: #{length(p2.pending_garbage)}, on_board: #{has_garbage_on_board})"
+             "p2 should have garbage (pending: #{length(p2.pending_garbage)}, on_board: #{has_garbage_on_board})"
     end
 
     test "pending garbage is applied when target's piece locks", %{pid: pid} do
@@ -343,7 +342,7 @@ defmodule TetrisGame.GameRoomTest do
         end)
 
       assert has_garbage_on_board,
-        "p2's board should have garbage rows after piece lock"
+             "p2's board should have garbage rows after piece lock"
     end
   end
 
