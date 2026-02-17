@@ -1,29 +1,66 @@
+import { useState, useEffect } from "react";
 import { TETROMINOES } from "../constants.ts";
-import type { PlayerBroadcast } from "../types.ts";
-import type { Opponent } from "../hooks/useMultiplayerGame.ts";
-import Board from "./Board.tsx";
-import MiniBoard from "./MiniBoard.tsx";
-import TargetIndicator from "./TargetIndicator.tsx";
-import NextPiece from "./NextPiece.tsx";
-import StatBox from "./StatBox.tsx";
-import LatencyIndicator from "./LatencyIndicator.tsx";
+import type { GameState } from "../types.ts";
+import { calculateCellSize } from "../utils/calculateCellSize.ts";
+import PlayerBoard from "./PlayerBoard.tsx";
 
 interface MultiBoardProps {
-  myState: PlayerBroadcast | null;
-  opponents: Opponent[];
+  gameState: GameState;
+  myPlayerId: string;
   latency: number | null;
 }
 
+type GlowLevel = "self" | "target" | "other" | "eliminated";
+
+function resolveGlowLevel(
+  playerId: string,
+  myPlayerId: string,
+  targetId: string | null,
+  alive: boolean,
+): GlowLevel {
+  if (!alive) return "eliminated";
+  if (playerId === myPlayerId) return "self";
+  if (playerId === targetId) return "target";
+  return "other";
+}
+
+function useViewportWidth(): number {
+  const [width, setWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    function handleResize() {
+      setWidth(window.innerWidth);
+    }
+    window.addEventListener("resize", handleResize);
+    return () =>
+      window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return width;
+}
+
 export default function MultiBoard({
-  myState,
-  opponents,
+  gameState,
+  myPlayerId,
   latency,
 }: MultiBoardProps) {
+  const viewportWidth = useViewportWidth();
+  const myState = gameState.players[myPlayerId];
   if (!myState) return null;
 
-  const targetOpponent = opponents.find(
-    (o) => o.id === myState.target,
+  const sortedPlayers = Object.entries(gameState.players).sort(
+    ([a], [b]) => a.localeCompare(b),
   );
+  const playerCount = sortedPlayers.length;
+  const cellSize = calculateCellSize(
+    playerCount,
+    viewportWidth,
+  );
+  const gap = Math.max(8, Math.round(cellSize * 0.4));
+
+  const targetNickname = myState.target
+    ? gameState.players[myState.target]?.nickname
+    : undefined;
 
   const tetroDef = myState.next_piece
     ? TETROMINOES[myState.next_piece]
@@ -32,63 +69,46 @@ export default function MultiBoard({
     ? { shape: tetroDef.shape, color: tetroDef.color }
     : null;
 
-  const leftOpponents = opponents.filter((_, i) => i % 2 === 0);
-  const rightOpponents = opponents.filter(
-    (_, i) => i % 2 === 1,
-  );
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
       <h1 className="mb-4 text-2xl font-extrabold uppercase tracking-widest bg-gradient-to-br from-accent to-cyan bg-clip-text text-transparent">
         Tetris Battle
       </h1>
-      <div className="flex items-start gap-5">
-        <div className="flex min-w-35 flex-col">
-          {leftOpponents.map((o) => (
-            <MiniBoard
-              key={o.id}
-              board={o.board}
-              nickname={o.nickname}
-              alive={o.alive}
-              isTarget={o.id === myState.target}
-              pendingGarbage={o.pending_garbage}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap,
+        }}
+      >
+        {sortedPlayers.map(([id, player], index) => {
+          const hue = (index * 360) / playerCount;
+          const glowLevel = resolveGlowLevel(
+            id,
+            myPlayerId,
+            myState.target,
+            player.alive,
+          );
+          const isMe = id === myPlayerId;
+          return (
+            <PlayerBoard
+              key={id}
+              board={player.board}
+              cellSize={cellSize}
+              nickname={player.nickname}
+              score={player.score}
+              lines={player.lines}
+              pendingGarbage={player.pending_garbage}
+              playerHue={hue}
+              glowLevel={glowLevel}
+              isMe={isMe}
+              nextPiece={isMe ? nextPieceObj : undefined}
+              targetNickname={isMe ? targetNickname : undefined}
+              level={isMe ? myState.level : undefined}
+              latency={isMe ? latency : undefined}
             />
-          ))}
-          <TargetIndicator
-            targetNickname={targetOpponent?.nickname}
-          />
-          <div className="rounded-lg border border-border bg-bg-secondary p-3">
-            {nextPieceObj && <NextPiece piece={nextPieceObj} />}
-            <StatBox label="Score" value={myState.score} />
-            <StatBox label="Lines" value={myState.lines} />
-            <StatBox label="Level" value={myState.level} />
-          </div>
-          <LatencyIndicator latency={latency} />
-        </div>
-
-        <div className="relative">
-          <Board board={myState.board} pendingGarbage={myState.pending_garbage} />
-          {!myState.alive && (
-            <div className="absolute inset-0 flex items-center justify-center rounded bg-black/75">
-              <div className="text-2xl font-bold text-red">
-                Eliminated
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex min-w-35 flex-col">
-          {rightOpponents.map((o) => (
-            <MiniBoard
-              key={o.id}
-              board={o.board}
-              nickname={o.nickname}
-              alive={o.alive}
-              isTarget={o.id === myState.target}
-              pendingGarbage={o.pending_garbage}
-            />
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -41,11 +41,11 @@ export default function GameSession() {
     );
   }
 
-  if (game.status === "playing") {
+  if (game.status === "playing" && game.gameState && playerId) {
     return (
       <MultiBoard
-        myState={game.myState}
-        opponents={game.opponents}
+        gameState={game.gameState}
+        myPlayerId={playerId}
         latency={latency}
       />
     );

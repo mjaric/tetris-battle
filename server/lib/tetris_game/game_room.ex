@@ -449,13 +449,22 @@ defmodule TetrisGame.GameRoom do
       {bot_id, _} ->
         Logger.debug("[Game] bot #{bot_id} process down, cleaning up")
 
-        new_state = %{
-          state
-          | players: Map.delete(state.players, bot_id),
-            player_order: List.delete(state.player_order, bot_id),
-            bot_ids: MapSet.delete(state.bot_ids, bot_id),
-            bot_pids: Map.delete(state.bot_pids, bot_id)
-        }
+        new_state =
+          if state.status == :waiting do
+            %{
+              state
+              | players: Map.delete(state.players, bot_id),
+                player_order:
+                  List.delete(state.player_order, bot_id),
+                bot_ids: MapSet.delete(state.bot_ids, bot_id),
+                bot_pids: Map.delete(state.bot_pids, bot_id)
+            }
+          else
+            %{
+              state
+              | bot_pids: Map.delete(state.bot_pids, bot_id)
+            }
+          end
 
         Lobby.update_room(
           state.room_id,
