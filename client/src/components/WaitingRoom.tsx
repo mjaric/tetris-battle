@@ -25,7 +25,11 @@ export default function WaitingRoom({
 
   function addBot() {
     if (!channel) return;
-    channel.push("add_bot", { difficulty });
+    channel
+      .push("add_bot", { difficulty })
+      .receive("error", (resp) => {
+        console.error("add_bot failed:", resp.reason);
+      });
   }
 
   function removeBot(botId: string) {
