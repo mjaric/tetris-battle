@@ -8,4 +8,8 @@ defmodule TetrisWeb.Router do
   scope "/api", TetrisWeb do
     pipe_through(:api)
   end
+
+  scope "/", TetrisWeb do
+    get("/*path", PageController, :index)
+  end
 end
