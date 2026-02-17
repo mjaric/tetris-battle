@@ -213,27 +213,6 @@ defmodule TetrisGame.GameRoom do
     end
   end
 
-  defp do_leave(state, player_id, is_player, is_host) do
-    new_players = if is_player, do: Map.delete(state.players, player_id), else: state.players
-    new_order = if is_player, do: List.delete(state.player_order, player_id), else: state.player_order
-
-    remaining_humans = Enum.reject(new_order, &MapSet.member?(state.bot_ids, &1))
-    room_empty = map_size(new_players) == 0 and is_host
-    all_bots = remaining_humans == [] and map_size(new_players) > 0
-
-    if room_empty or all_bots do
-      stop_all_bots(state)
-      Lobby.update_room(state.room_id, %{player_count: 0})
-      {:stop, :normal, :ok, state}
-    else
-      new_host = if is_host and remaining_humans != [], do: hd(remaining_humans), else: state.host
-      new_state = %{state | players: new_players, player_order: new_order, host: new_host}
-      Lobby.update_room(state.room_id, %{player_count: map_size(new_players)})
-      broadcast_state(new_state)
-      {:reply, :ok, new_state}
-    end
-  end
-
   def handle_call({:start_game, requester_id}, _from, state) do
     cond do
       state.status != :waiting ->
@@ -376,6 +355,36 @@ defmodule TetrisGame.GameRoom do
 
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
+  end
+
+  defp do_leave(state, player_id, is_player, is_host) do
+    new_players =
+      if is_player, do: Map.delete(state.players, player_id), else: state.players
+
+    new_order =
+      if is_player,
+        do: List.delete(state.player_order, player_id),
+        else: state.player_order
+
+    remaining_humans = Enum.reject(new_order, &MapSet.member?(state.bot_ids, &1))
+    room_empty = map_size(new_players) == 0 and is_host
+    all_bots = remaining_humans == [] and map_size(new_players) > 0
+
+    if room_empty or all_bots do
+      stop_all_bots(state)
+      Lobby.update_room(state.room_id, %{player_count: 0})
+      {:stop, :normal, :ok, state}
+    else
+      new_host =
+        if is_host and remaining_humans != [],
+          do: hd(remaining_humans),
+          else: state.host
+
+      new_state = %{state | players: new_players, player_order: new_order, host: new_host}
+      Lobby.update_room(state.room_id, %{player_count: map_size(new_players)})
+      broadcast_state(new_state)
+      {:reply, :ok, new_state}
+    end
   end
 
   @impl true
@@ -664,20 +673,24 @@ defmodule TetrisGame.GameRoom do
       player = acc[player_id]
 
       if player.alive and player.pending_garbage != [] do
-        game_map = PlayerState.to_game_logic_map(player)
-
-        updated_map =
-          case GameLogic.apply_pending_garbage(game_map) do
-            {:ok, s} -> s
-            {:game_over, s} -> s
-          end
-
-        updated_player = PlayerState.from_game_logic_map(player, updated_map)
-        Map.put(acc, player_id, updated_player)
+        apply_pending_garbage_for_player(acc, player_id, player)
       else
         acc
       end
     end)
+  end
+
+  defp apply_pending_garbage_for_player(players, player_id, player) do
+    game_map = PlayerState.to_game_logic_map(player)
+
+    updated_map =
+      case GameLogic.apply_pending_garbage(game_map) do
+        {:ok, s} -> s
+        {:game_over, s} -> s
+      end
+
+    updated_player = PlayerState.from_game_logic_map(player, updated_map)
+    Map.put(players, player_id, updated_player)
   end
 
   # -- Elimination checking --
