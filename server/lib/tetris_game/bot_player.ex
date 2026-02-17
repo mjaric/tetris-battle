@@ -15,7 +15,8 @@ defmodule TetrisGame.BotPlayer do
   @timing %{
     easy: %{think_min: 800, think_max: 1200, action_interval: 200},
     medium: %{think_min: 300, think_max: 500, action_interval: 100},
-    hard: %{think_min: 50, think_max: 100, action_interval: 50}
+    hard: %{think_min: 50, think_max: 100, action_interval: 50},
+    battle: %{think_min: 50, think_max: 100, action_interval: 50}
   }
 
   defstruct [
@@ -59,6 +60,46 @@ defmodule TetrisGame.BotPlayer do
     )
 
     {:ok, state}
+  end
+
+  @doc """
+  Extracts battle context from room state for BotStrategy.
+
+  Returns a map with pending garbage count, own board height,
+  opponent heights, opponent count, and leading opponent score.
+  """
+  @spec build_battle_context(String.t(), map(), map()) :: map()
+  def build_battle_context(bot_id, bot_player, players) do
+    alive_opponents =
+      players
+      |> Enum.filter(fn {id, p} -> id != bot_id and p.alive end)
+      |> Enum.map(fn {_id, p} -> p end)
+
+    opp_heights =
+      Enum.map(alive_opponents, fn p ->
+        max_height_from_board(p.board)
+      end)
+
+    leading_score =
+      case alive_opponents do
+        [] -> 0
+        opps -> opps |> Enum.map(& &1.score) |> Enum.max()
+      end
+
+    pending_count =
+      case bot_player.pending_garbage do
+        count when is_integer(count) -> count
+        list when is_list(list) -> length(list)
+        _ -> 0
+      end
+
+    %{
+      pending_garbage_count: pending_count,
+      own_max_height: max_height_from_board(bot_player.board),
+      opponent_max_heights: opp_heights,
+      opponent_count: length(alive_opponents),
+      leading_opponent_score: leading_score
+    }
   end
 
   @impl true
@@ -130,6 +171,48 @@ defmodule TetrisGame.BotPlayer do
     {:noreply, %{state | phase: :thinking, last_piece_id: piece_id, action_queue: []}}
   end
 
+  defp do_think(%{difficulty: :battle} = state) do
+    room = GameRoom.via(state.room_id)
+
+    try do
+      room_state = GameRoom.get_state(room)
+      player = room_state.players[state.bot_id]
+
+      if player == nil or not player.alive do
+        {:stop, :normal, state}
+      else
+        battle_ctx =
+          build_battle_context(
+            state.bot_id,
+            player,
+            room_state.players
+          )
+
+        {_rot, _x, actions} =
+          BotStrategy.best_placement(
+            player.board,
+            player.current_piece,
+            player.position,
+            player.next_piece,
+            :battle,
+            battle_ctx
+          )
+
+        maybe_set_target(room, room_state, state)
+
+        timing = @timing[:battle]
+        Process.send_after(
+          self(), :execute_action, timing.action_interval
+        )
+
+        {:noreply, %{state | phase: :executing, action_queue: actions}}
+      end
+    catch
+      :exit, _ ->
+        {:stop, :normal, state}
+    end
+  end
+
   defp do_think(state) do
     room = GameRoom.via(state.room_id)
 
@@ -192,8 +275,18 @@ defmodule TetrisGame.BotPlayer do
     if alive_opponents != [] do
       target =
         case state.difficulty do
+          :battle ->
+            {id, _} =
+              Enum.max_by(alive_opponents, fn {_, p} ->
+                {max_height_from_board(p.board), p.score}
+              end)
+
+            id
+
           :hard ->
-            {id, _} = Enum.max_by(alive_opponents, fn {_, p} -> p.score end)
+            {id, _} =
+              Enum.max_by(alive_opponents, fn {_, p} -> p.score end)
+
             id
 
           _ ->
@@ -207,6 +300,14 @@ defmodule TetrisGame.BotPlayer do
         :exit, _ -> :ok
       end
     end
+  end
+
+  defp max_height_from_board(board) do
+    board
+    |> Enum.with_index()
+    |> Enum.find_value(0, fn {row, idx} ->
+      if Enum.any?(row, &(&1 != nil)), do: 20 - idx
+    end)
   end
 
   defp piece_identifier(player_data) do
