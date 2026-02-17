@@ -211,8 +211,8 @@ defmodule TetrisGame.BotPlayer do
 
   defp piece_identifier(player_data) do
     case player_data do
-      %{current_piece: %{type: type, rotation: rot}, position: pos} ->
-        {type, rot, pos}
+      %{current_piece: %{type: type}, pieces_placed: pp} ->
+        {type, pp}
 
       _ ->
         nil

@@ -5,34 +5,39 @@ defmodule Tetris.BotStrategyTest do
   alias Tetris.BotStrategy
   alias Tetris.Piece
 
-  describe "plan_actions/4" do
+  describe "plan_actions/3" do
     test "no rotation or movement produces just hard_drop" do
-      actions = BotStrategy.plan_actions(0, 3, 0, 3)
+      actions = BotStrategy.plan_actions(3, 0, 3)
       assert actions == ["hard_drop"]
     end
 
-    test "single rotation" do
-      actions = BotStrategy.plan_actions(0, 3, 1, 3)
+    test "single rotation needed" do
+      actions = BotStrategy.plan_actions(3, 1, 3)
       assert actions == ["rotate", "hard_drop"]
     end
 
-    test "wrapping rotation from 3 to 0 is 1 rotate" do
-      actions = BotStrategy.plan_actions(3, 3, 0, 3)
-      assert actions == ["rotate", "hard_drop"]
+    test "two rotations needed" do
+      actions = BotStrategy.plan_actions(3, 2, 3)
+      assert actions == ["rotate", "rotate", "hard_drop"]
+    end
+
+    test "three rotations needed" do
+      actions = BotStrategy.plan_actions(3, 3, 3)
+      assert actions == ["rotate", "rotate", "rotate", "hard_drop"]
     end
 
     test "move left" do
-      actions = BotStrategy.plan_actions(0, 5, 0, 3)
+      actions = BotStrategy.plan_actions(5, 0, 3)
       assert actions == ["move_left", "move_left", "hard_drop"]
     end
 
     test "move right" do
-      actions = BotStrategy.plan_actions(0, 3, 0, 5)
+      actions = BotStrategy.plan_actions(3, 0, 5)
       assert actions == ["move_right", "move_right", "hard_drop"]
     end
 
     test "rotation then move" do
-      actions = BotStrategy.plan_actions(0, 3, 2, 5)
+      actions = BotStrategy.plan_actions(3, 2, 5)
 
       assert actions == [
                "rotate",
@@ -41,6 +46,13 @@ defmodule Tetris.BotStrategyTest do
                "move_right",
                "hard_drop"
              ]
+    end
+
+    test "zero rotations with pre-rotated piece" do
+      # enumerate_placements says 0 additional rotations needed
+      actions = BotStrategy.plan_actions(4, 0, 4)
+      rotate_count = Enum.count(actions, &(&1 == "rotate"))
+      assert rotate_count == 0
     end
   end
 

@@ -204,7 +204,8 @@ defmodule Tetris.GameLogic do
         score: new_score,
         lines: new_lines,
         level: new_level,
-        gravity_threshold: new_threshold
+        gravity_threshold: new_threshold,
+        pieces_placed: Map.get(state, :pieces_placed, 0) + 1
     }
 
     # 4. Spawn next piece (garbage is applied in the tick loop)

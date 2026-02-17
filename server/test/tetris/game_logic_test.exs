@@ -22,7 +22,8 @@ defmodule Tetris.GameLogicTest do
         alive: true,
         pending_garbage: [],
         gravity_counter: 0,
-        gravity_threshold: 16
+        gravity_threshold: 16,
+        pieces_placed: 0
       },
       overrides
     )

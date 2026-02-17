@@ -305,6 +305,7 @@ defmodule Tetris.PlayerStateTest do
       assert map.pending_garbage == []
       assert map.gravity_counter == 0
       assert map.gravity_threshold == 16
+      assert map.pieces_placed == 0
     end
   end
 
@@ -325,7 +326,8 @@ defmodule Tetris.PlayerStateTest do
         target: "player-2",
         pending_garbage: [1, 2],
         gravity_counter: 5,
-        gravity_threshold: 10
+        gravity_threshold: 10,
+        pieces_placed: 7
       }
 
       updated_state = PlayerState.from_game_logic_map(state, updated_map)
@@ -345,6 +347,7 @@ defmodule Tetris.PlayerStateTest do
       assert updated_state.pending_garbage == [1, 2]
       assert updated_state.gravity_counter == 5
       assert updated_state.gravity_threshold == 10
+      assert updated_state.pieces_placed == 7
     end
 
     test "preserves input_queue from original state" do
@@ -364,7 +367,8 @@ defmodule Tetris.PlayerStateTest do
         target: nil,
         pending_garbage: [],
         gravity_counter: 0,
-        gravity_threshold: 16
+        gravity_threshold: 16,
+        pieces_placed: 1
       }
 
       updated_state = PlayerState.from_game_logic_map(state, updated_map)

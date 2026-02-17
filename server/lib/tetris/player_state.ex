@@ -26,7 +26,8 @@ defmodule Tetris.PlayerState do
     :pending_garbage,
     :gravity_counter,
     :gravity_threshold,
-    :input_queue
+    :input_queue,
+    :pieces_placed
   ]
 
   @type t :: %__MODULE__{
@@ -44,7 +45,8 @@ defmodule Tetris.PlayerState do
           pending_garbage: list(),
           gravity_counter: non_neg_integer(),
           gravity_threshold: pos_integer(),
-          input_queue: :queue.queue()
+          input_queue: :queue.queue(),
+          pieces_placed: non_neg_integer()
         }
 
   @doc """
@@ -75,7 +77,8 @@ defmodule Tetris.PlayerState do
       pending_garbage: [],
       gravity_counter: 0,
       gravity_threshold: 16,
-      input_queue: :queue.new()
+      input_queue: :queue.new(),
+      pieces_placed: 0
     }
   end
 
@@ -124,7 +127,8 @@ defmodule Tetris.PlayerState do
       target: state.target,
       pending_garbage: state.pending_garbage,
       gravity_counter: state.gravity_counter,
-      gravity_threshold: state.gravity_threshold
+      gravity_threshold: state.gravity_threshold,
+      pieces_placed: state.pieces_placed
     }
   end
 
@@ -151,7 +155,8 @@ defmodule Tetris.PlayerState do
       pending_garbage: game_logic_map.pending_garbage,
       gravity_counter: game_logic_map.gravity_counter,
       gravity_threshold: game_logic_map.gravity_threshold,
-      input_queue: original.input_queue
+      input_queue: original.input_queue,
+      pieces_placed: game_logic_map.pieces_placed
     }
   end
 

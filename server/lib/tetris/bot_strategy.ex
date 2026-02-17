@@ -77,7 +77,6 @@ defmodule Tetris.BotStrategy do
 
     actions =
       plan_actions(
-        piece.rotation,
         spawn_x,
         chosen.rotation_count,
         chosen.target_x
@@ -104,17 +103,15 @@ defmodule Tetris.BotStrategy do
   @doc """
   Converts a target placement into a sequence of input actions.
 
+  `rotations_needed` is the number of additional clockwise rotations
+  (as returned by `enumerate_placements`), not an absolute rotation index.
+
   Produces rotate actions, then horizontal moves, then "hard_drop".
   """
-  @spec plan_actions(
-          non_neg_integer(),
-          integer(),
-          non_neg_integer(),
-          integer()
-        ) :: [String.t()]
-  def plan_actions(current_rotation, spawn_x, target_rotation, target_x) do
-    rotations = rem(target_rotation - current_rotation + 4, 4)
-    rotate_actions = List.duplicate("rotate", rotations)
+  @spec plan_actions(integer(), non_neg_integer(), integer()) ::
+          [String.t()]
+  def plan_actions(spawn_x, rotations_needed, target_x) do
+    rotate_actions = List.duplicate("rotate", rotations_needed)
 
     dx = target_x - spawn_x
 

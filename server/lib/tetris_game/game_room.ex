@@ -786,7 +786,8 @@ defmodule TetrisGame.GameRoom do
             score: player.score,
             current_piece: player.current_piece,
             position: player.position,
-            next_piece: player.next_piece
+            next_piece: player.next_piece,
+            pieces_placed: player.pieces_placed
           }
           |> then(fn data -> {player_id, data} end)
         end)
