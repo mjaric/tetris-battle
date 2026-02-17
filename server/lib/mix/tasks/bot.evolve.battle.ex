@@ -1,33 +1,39 @@
-defmodule Mix.Tasks.Bot.Evolve do
-  @shortdoc "Evolve optimal bot weights via genetic algorithm"
+defmodule Mix.Tasks.Bot.Evolve.Battle do
+  @shortdoc "Evolve battle-aware bot weights via genetic algorithm"
   @moduledoc """
   Runs a genetic algorithm to evolve optimal heuristic weights
-  for the Tetris bot's Hard difficulty.
+  for the Tetris bot's Battle difficulty.
+
+  Uses 4-player battle simulation instead of solo games.
+  Starts with static solo opponents, switches to co-evolution
+  on stagnation, and falls back if regression is detected.
 
   ## Usage
 
-      mix bot.evolve [options]
+      mix bot.evolve.battle [options]
 
   ## Options
 
     * `--population N` — Population size (default: 50)
     * `--generations N` — Number of generations (default: 100)
-    * `--games N` — Games per genome per generation (default: 10)
+    * `--battles N` — Battles per genome per generation (default: 10)
     * `--concurrency N` — Max parallel evaluations (default: schedulers)
-    * `--output PATH` — Output JSON file (default: priv/bot_weights.json)
-    * `--log PATH` — CSV log file (default: priv/bot_evolution_log.csv)
+    * `--output PATH` — Output JSON file (default: priv/battle_weights.json)
+    * `--log PATH` — CSV log file (default: priv/battle_evolution_log.csv)
     * `--tournament N` — Tournament size (default: 3)
     * `--mutation-rate F` — Mutation probability per weight (default: 0.3)
     * `--mutation-sigma F` — Gaussian std dev (default: 0.15)
     * `--crossover-rate F` — Crossover probability (default: 0.7)
     * `--elitism N` — Elites carried forward (default: 2)
     * `--immigrants N` — Random genomes injected per generation (default: 5)
-    * `--workers NODES` — Comma-separated worker node names (e.g. worker@192.168.1.50)
+    * `--stagnation N` — Generations before switching to co-evolution (default: 5)
+    * `--regression N` — Generations of decline before reverting (default: 3)
+    * `--workers NODES` — Comma-separated worker node names
     * `--cookie COOKIE` — Erlang distribution cookie (default: tetris_evo)
 
   ## Distributed mode
 
-      mix bot.evolve --workers worker@192.168.1.50 --cookie tetris_evo
+      mix bot.evolve.battle --workers worker@192.168.1.50 --cookie tetris_evo
   """
 
   use Mix.Task
@@ -39,7 +45,7 @@ defmodule Mix.Tasks.Bot.Evolve do
   @switches [
     population: :integer,
     generations: :integer,
-    games: :integer,
+    battles: :integer,
     concurrency: :integer,
     output: :string,
     log: :string,
@@ -49,6 +55,8 @@ defmodule Mix.Tasks.Bot.Evolve do
     crossover_rate: :float,
     elitism: :integer,
     immigrants: :integer,
+    stagnation: :integer,
+    regression: :integer,
     workers: :string,
     cookie: :string
   ]
@@ -56,7 +64,7 @@ defmodule Mix.Tasks.Bot.Evolve do
   @aliases [
     p: :population,
     g: :generations,
-    n: :games,
+    n: :battles,
     c: :concurrency,
     o: :output,
     w: :workers
@@ -71,7 +79,7 @@ defmodule Mix.Tasks.Bot.Evolve do
 
     setup_cluster(opts)
 
-    defaults = Evolution.default_config()
+    defaults = Evolution.default_battle_config()
     priv_dir = :code.priv_dir(:tetris) |> to_string()
 
     nodes = Cluster.available_nodes()
@@ -80,32 +88,36 @@ defmodule Mix.Tasks.Bot.Evolve do
     config = %{
       population_size: opts[:population] || defaults.population_size,
       generations: opts[:generations] || defaults.generations,
-      games_per_genome: opts[:games] || defaults.games_per_genome,
+      battles_per_genome: opts[:battles] || defaults.battles_per_genome,
+      num_opponents: 3,
       tournament_size: opts[:tournament] || defaults.tournament_size,
       crossover_rate: opts[:crossover_rate] || defaults.crossover_rate,
       mutation_rate: opts[:mutation_rate] || defaults.mutation_rate,
       mutation_sigma: opts[:mutation_sigma] || defaults.mutation_sigma,
       elitism_count: opts[:elitism] || defaults.elitism_count,
       immigrant_count: opts[:immigrants] || defaults.immigrant_count,
-      max_concurrency: opts[:concurrency] || default_concurrency
+      max_concurrency: opts[:concurrency] || default_concurrency,
+      stagnation_threshold: opts[:stagnation] || defaults.stagnation_threshold,
+      regression_threshold: opts[:regression] || defaults.regression_threshold,
+      lookahead: true
     }
 
     output_path =
-      opts[:output] || Path.join(priv_dir, "bot_weights.json")
+      opts[:output] || Path.join(priv_dir, "battle_weights.json")
 
     log_path =
-      opts[:log] || Path.join(priv_dir, "bot_evolution_log.csv")
+      opts[:log] || Path.join(priv_dir, "battle_evolution_log.csv")
 
-    total_games =
-      config.population_size * config.games_per_genome *
+    total_battles =
+      config.population_size * config.battles_per_genome *
         config.generations
 
-    print_header(config, total_games, nodes)
+    print_header(config, total_battles, nodes)
     init_csv(log_path)
-    history = :ets.new(:evolution_history, [:ordered_set, :public])
+    history = :ets.new(:battle_evolution_history, [:ordered_set, :public])
 
     best =
-      Evolution.evolve(config, fn stats ->
+      Evolution.evolve_battle(config, fn stats ->
         print_generation(stats)
         append_csv(log_path, stats)
         :ets.insert(history, {stats.generation, stats})
@@ -206,45 +218,57 @@ defmodule Mix.Tasks.Bot.Evolve do
     end
   end
 
-  defp print_header(config, total_games, nodes) do
+  defp print_header(config, total_battles, nodes) do
     node_info =
       if length(nodes) > 1 do
-        "Nodes:        #{length(nodes)} (#{Enum.map_join(nodes, ", ", &to_string/1)})"
+        "Nodes:          #{length(nodes)} (#{Enum.map_join(nodes, ", ", &to_string/1)})"
       else
-        "Nodes:        1 (local only)"
+        "Nodes:          1 (local only)"
       end
 
     Mix.shell().info("""
 
-    ====================================
-      Tetris Bot Weight Evolution
-    ====================================
-    Population:   #{config.population_size}
-    Generations:  #{config.generations}
-    Games/genome: #{config.games_per_genome}
-    Concurrency:  #{config.max_concurrency}
-    Total games:  #{total_games}
+    ==========================================
+      Tetris Battle Bot Weight Evolution
+    ==========================================
+    Population:     #{config.population_size}
+    Generations:    #{config.generations}
+    Battles/genome: #{config.battles_per_genome}
+    Concurrency:    #{config.max_concurrency}
+    Total battles:  #{total_battles}
+    Stagnation:     switch to co-evo after #{config.stagnation_threshold} flat gens
+    Regression:     revert after #{config.regression_threshold} declining gens
     #{node_info}
     """)
   end
 
   defp print_generation(stats) do
     w = stats.best_genome
+    mode = Map.get(stats, :opponent_mode, :solo_opponents)
+
+    mode_tag =
+      case mode do
+        :co_evolution -> "[co-evo]"
+        _ -> "[solo  ]"
+      end
 
     msg =
       :io_lib.format(
-        "Gen ~3B | Best: ~6.1f lines | Avg: ~6.1f | " <>
-          "W: h=~.2f o=~.2f b=~.2f l=~.2f m=~.2f w=~.2f",
+        "Gen ~3B ~s | Best: ~6.2f | Avg: ~6.2f | " <>
+          "h=~.2f o=~.2f b=~.2f l=~.2f gi=~.2f gs=~.2f tb=~.2f sv=~.2f",
         [
           stats.generation,
+          mode_tag,
           stats.best_fitness,
           stats.avg_fitness,
           w.height,
           w.holes,
           w.bumpiness,
           w.lines,
-          w.max_height,
-          w.wells
+          w.garbage_incoming,
+          w.garbage_send,
+          w.tetris_bonus,
+          w.survival
         ]
       )
 
@@ -253,21 +277,26 @@ defmodule Mix.Tasks.Bot.Evolve do
 
   defp init_csv(path) do
     header =
-      "generation,best_fitness,avg_fitness,worst_fitness," <>
-        "best_height,best_holes,best_bumpiness,best_lines," <>
-        "best_max_height,best_wells\n"
+      "generation,opponent_mode,best_fitness,avg_fitness,worst_fitness," <>
+        "height,holes,bumpiness,lines,max_height,wells," <>
+        "garbage_incoming,garbage_send,tetris_bonus," <>
+        "opponent_danger,survival,line_efficiency\n"
 
     File.write!(path, header)
   end
 
   defp append_csv(path, stats) do
     w = stats.best_genome
+    mode = Map.get(stats, :opponent_mode, :solo_opponents)
 
     row =
       :io_lib.format(
-        "~B,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f~n",
+        "~B,~s,~.4f,~.4f,~.4f," <>
+          "~.4f,~.4f,~.4f,~.4f,~.4f,~.4f," <>
+          "~.4f,~.4f,~.4f,~.4f,~.4f,~.4f~n",
         [
           stats.generation,
+          mode,
           stats.best_fitness,
           stats.avg_fitness,
           stats.worst_fitness,
@@ -276,7 +305,13 @@ defmodule Mix.Tasks.Bot.Evolve do
           w.bumpiness,
           w.lines,
           w.max_height,
-          w.wells
+          w.wells,
+          w.garbage_incoming,
+          w.garbage_send,
+          w.tetris_bonus,
+          w.opponent_danger,
+          w.survival,
+          w.line_efficiency
         ]
       )
 
@@ -291,13 +326,19 @@ defmodule Mix.Tasks.Bot.Evolve do
         bumpiness: Float.round(genome.bumpiness, 4),
         lines: Float.round(genome.lines, 4),
         max_height: Float.round(genome.max_height, 4),
-        wells: Float.round(genome.wells, 4)
+        wells: Float.round(genome.wells, 4),
+        garbage_incoming: Float.round(genome.garbage_incoming, 4),
+        garbage_send: Float.round(genome.garbage_send, 4),
+        tetris_bonus: Float.round(genome.tetris_bonus, 4),
+        opponent_danger: Float.round(genome.opponent_danger, 4),
+        survival: Float.round(genome.survival, 4),
+        line_efficiency: Float.round(genome.line_efficiency, 4)
       },
-      fitness: Float.round(fitness, 2),
+      fitness: Float.round(fitness, 4),
       config: %{
         population_size: config.population_size,
         generations: config.generations,
-        games_per_genome: config.games_per_genome
+        battles_per_genome: config.battles_per_genome
       },
       evolved_at: DateTime.utc_now() |> DateTime.to_iso8601()
     }
@@ -350,9 +391,7 @@ defmodule Mix.Tasks.Bot.Evolve do
       Mix.shell().info("#{label} |#{line}")
     end
 
-    axis =
-      "     +" <> String.duplicate("-", chart_width)
-
+    axis = "     +" <> String.duplicate("-", chart_width)
     Mix.shell().info(axis)
 
     gen_labels = gen_label_line(num_gens, chart_width)
@@ -367,23 +406,32 @@ defmodule Mix.Tasks.Bot.Evolve do
       0..num_gens//step
       |> Enum.map(&Integer.to_string/1)
 
-    Enum.join(labels, String.duplicate(" ", max(div(chart_width, length(labels)) - 2, 1)))
+    Enum.join(
+      labels,
+      String.duplicate(" ", max(div(chart_width, length(labels)) - 2, 1))
+    )
   end
 
   defp print_summary(genome, fitness, output_path, log_path) do
     Mix.shell().info("""
 
-    ====================================
+    ==========================================
       Evolution Complete
-    ====================================
-    Best fitness: #{Float.round(fitness, 2)} avg lines/game
+    ==========================================
+    Best fitness: #{Float.round(fitness, 4)}
     Weights:
-      height:     #{Float.round(genome.height, 4)}
-      holes:      #{Float.round(genome.holes, 4)}
-      bumpiness:  #{Float.round(genome.bumpiness, 4)}
-      lines:      #{Float.round(genome.lines, 4)}
-      max_height: #{Float.round(genome.max_height, 4)}
-      wells:      #{Float.round(genome.wells, 4)}
+      height:          #{Float.round(genome.height, 4)}
+      holes:           #{Float.round(genome.holes, 4)}
+      bumpiness:       #{Float.round(genome.bumpiness, 4)}
+      lines:           #{Float.round(genome.lines, 4)}
+      max_height:      #{Float.round(genome.max_height, 4)}
+      wells:           #{Float.round(genome.wells, 4)}
+      garbage_incoming:#{Float.round(genome.garbage_incoming, 4)}
+      garbage_send:    #{Float.round(genome.garbage_send, 4)}
+      tetris_bonus:    #{Float.round(genome.tetris_bonus, 4)}
+      opponent_danger: #{Float.round(genome.opponent_danger, 4)}
+      survival:        #{Float.round(genome.survival, 4)}
+      line_efficiency: #{Float.round(genome.line_efficiency, 4)}
 
     Saved to: #{output_path}
     CSV log:  #{log_path}

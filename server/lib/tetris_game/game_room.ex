@@ -10,12 +10,12 @@ defmodule TetrisGame.GameRoom do
   use GenServer
   require Logger
 
-  alias Tetris.PlayerState
-  alias Tetris.GameLogic
   alias Tetris.Board
-  alias TetrisGame.Lobby
+  alias Tetris.GameLogic
+  alias Tetris.PlayerState
   alias TetrisGame.BotNames
   alias TetrisGame.BotSupervisor
+  alias TetrisGame.Lobby
 
   @tick_interval 50
 
@@ -206,67 +206,31 @@ defmodule TetrisGame.GameRoom do
     is_player = Map.has_key?(state.players, player_id)
     is_host = state.host == player_id
 
-    if not is_player and not is_host do
-      # Unknown player, no-op
-      {:reply, :ok, state}
+    if is_player or is_host do
+      do_leave(state, player_id, is_player, is_host)
     else
-      new_players =
-        if is_player do
-          Map.delete(state.players, player_id)
-        else
-          state.players
-        end
+      {:reply, :ok, state}
+    end
+  end
 
-      new_order =
-        if is_player do
-          List.delete(state.player_order, player_id)
-        else
-          state.player_order
-        end
+  defp do_leave(state, player_id, is_player, is_host) do
+    new_players = if is_player, do: Map.delete(state.players, player_id), else: state.players
+    new_order = if is_player, do: List.delete(state.player_order, player_id), else: state.player_order
 
-      # Room is empty if no players and host is leaving
-      room_empty = map_size(new_players) == 0 and is_host
+    remaining_humans = Enum.reject(new_order, &MapSet.member?(state.bot_ids, &1))
+    room_empty = map_size(new_players) == 0 and is_host
+    all_bots = remaining_humans == [] and map_size(new_players) > 0
 
-      remaining_humans =
-        Enum.filter(new_order, fn id ->
-          not MapSet.member?(state.bot_ids, id)
-        end)
-
-      all_bots = remaining_humans == [] and map_size(new_players) > 0
-
-      cond do
-        room_empty or all_bots ->
-          stop_all_bots(state)
-          Lobby.update_room(state.room_id, %{player_count: 0})
-          {:stop, :normal, :ok, state}
-
-        true ->
-          new_host =
-            if is_host and length(remaining_humans) > 0 do
-              hd(remaining_humans)
-            else
-              if is_host do
-                state.host
-              else
-                state.host
-              end
-            end
-
-          new_state = %{
-            state
-            | players: new_players,
-              player_order: new_order,
-              host: new_host
-          }
-
-          Lobby.update_room(
-            state.room_id,
-            %{player_count: map_size(new_players)}
-          )
-
-          broadcast_state(new_state)
-          {:reply, :ok, new_state}
-      end
+    if room_empty or all_bots do
+      stop_all_bots(state)
+      Lobby.update_room(state.room_id, %{player_count: 0})
+      {:stop, :normal, :ok, state}
+    else
+      new_host = if is_host and remaining_humans != [], do: hd(remaining_humans), else: state.host
+      new_state = %{state | players: new_players, player_order: new_order, host: new_host}
+      Lobby.update_room(state.room_id, %{player_count: map_size(new_players)})
+      broadcast_state(new_state)
+      {:reply, :ok, new_state}
     end
   end
 
@@ -630,23 +594,27 @@ defmodule TetrisGame.GameRoom do
       player = acc_players[player_id]
 
       if player.alive do
-        game_map = PlayerState.to_game_logic_map(player)
-
-        case GameLogic.apply_gravity(game_map) do
-          {:ok, :locked, new_map} ->
-            garbage = collect_garbage_events(new_map, player.target)
-            clean_map = Map.delete(new_map, :lines_cleared_this_lock)
-            updated_player = PlayerState.from_game_logic_map(player, clean_map)
-            {Map.put(acc_players, player_id, updated_player), acc_garbage ++ garbage}
-
-          {:ok, _status, new_map} ->
-            updated_player = PlayerState.from_game_logic_map(player, new_map)
-            {Map.put(acc_players, player_id, updated_player), acc_garbage}
-        end
+        apply_gravity_for_player(acc_players, acc_garbage, player_id, player)
       else
         {acc_players, acc_garbage}
       end
     end)
+  end
+
+  defp apply_gravity_for_player(acc_players, acc_garbage, player_id, player) do
+    game_map = PlayerState.to_game_logic_map(player)
+
+    case GameLogic.apply_gravity(game_map) do
+      {:ok, :locked, new_map} ->
+        garbage = collect_garbage_events(new_map, player.target)
+        clean_map = Map.delete(new_map, :lines_cleared_this_lock)
+        updated_player = PlayerState.from_game_logic_map(player, clean_map)
+        {Map.put(acc_players, player_id, updated_player), acc_garbage ++ garbage}
+
+      {:ok, _status, new_map} ->
+        updated_player = PlayerState.from_game_logic_map(player, new_map)
+        {Map.put(acc_players, player_id, updated_player), acc_garbage}
+    end
   end
 
   # -- Garbage distribution --
@@ -673,24 +641,20 @@ defmodule TetrisGame.GameRoom do
   defp distribute_garbage(players, garbage_events) do
     Enum.reduce(garbage_events, players, fn {target_id, count}, acc_players ->
       case Map.fetch(acc_players, target_id) do
-        {:ok, target_player} ->
-          if target_player.alive do
-            garbage_rows = for _i <- 1..count, do: Board.generate_garbage_row()
-
-            updated_target = %{
-              target_player
-              | pending_garbage: target_player.pending_garbage ++ garbage_rows
-            }
-
-            Map.put(acc_players, target_id, updated_target)
-          else
-            acc_players
-          end
-
-        :error ->
-          acc_players
+        {:ok, target_player} -> add_garbage_to_player(acc_players, target_id, target_player, count)
+        :error -> acc_players
       end
     end)
+  end
+
+  defp add_garbage_to_player(players, target_id, target_player, count) do
+    if target_player.alive do
+      garbage_rows = for _i <- 1..count, do: Board.generate_garbage_row()
+      updated_target = %{target_player | pending_garbage: target_player.pending_garbage ++ garbage_rows}
+      Map.put(players, target_id, updated_target)
+    else
+      players
+    end
   end
 
   # -- Immediate garbage application --

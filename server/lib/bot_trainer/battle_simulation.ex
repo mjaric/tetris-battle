@@ -100,10 +100,10 @@ defmodule BotTrainer.BattleSimulation do
     Enum.reduce(alive_ids, {players, []}, fn id, {ps, elims} ->
       player = ps[id]
 
-      if not player.alive do
-        {ps, elims}
-      else
+      if player.alive do
         tick_player(ps, id, player, elims, lookahead)
+      else
+        {ps, elims}
       end
     end)
   end
@@ -144,14 +144,14 @@ defmodule BotTrainer.BattleSimulation do
       {player, spawn_ok} = spawn_next(players[id])
       players = Map.put(players, id, player)
 
-      if not spawn_ok do
-        player = %{player | alive: false}
-        players = Map.put(players, id, player)
-        {players, elims ++ [id]}
-      else
+      if spawn_ok do
         player = update_target(player, players)
         players = Map.put(players, id, player)
         {players, elims}
+      else
+        player = %{player | alive: false}
+        players = Map.put(players, id, player)
+        {players, elims ++ [id]}
       end
     end
   end
