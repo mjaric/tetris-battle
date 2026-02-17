@@ -13,11 +13,7 @@ defmodule TetrisWeb.Endpoint do
     plug(Tidewave)
   end
 
-  plug(Corsica,
-    origins: ["http://localhost:3000"],
-    allow_headers: :all,
-    allow_methods: :all
-  )
+  plug TetrisWeb.CorsPlug
 
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
