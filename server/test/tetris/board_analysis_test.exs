@@ -4,149 +4,6 @@ defmodule Tetris.BoardAnalysisTest do
   alias Tetris.Board
   alias Tetris.BoardAnalysis
 
-  describe "board_to_tensor/1" do
-    test "converts empty board to all-zeros tensor" do
-      board = Board.new()
-      tensor = BoardAnalysis.board_to_tensor(board)
-
-      assert Nx.shape(tensor) == {20, 10}
-      assert Nx.type(tensor) == {:u, 8}
-      assert Nx.to_number(Nx.sum(tensor)) == 0
-    end
-
-    test "converts filled cells to 1s" do
-      board = Board.new()
-
-      board =
-        List.update_at(board, 19, fn _row ->
-          List.duplicate("#ff0000", 10)
-        end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      assert Nx.to_number(Nx.sum(tensor)) == 10
-    end
-  end
-
-  describe "column_heights/1" do
-    test "empty board has all zero heights" do
-      tensor = BoardAnalysis.board_to_tensor(Board.new())
-      heights = BoardAnalysis.column_heights(tensor)
-      assert Nx.to_flat_list(heights) == List.duplicate(0, 10)
-    end
-
-    test "single filled bottom row gives height 1 for all columns" do
-      board = Board.new()
-
-      board =
-        List.update_at(board, 19, fn _row ->
-          List.duplicate("#ff0000", 10)
-        end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      heights = BoardAnalysis.column_heights(tensor)
-      assert Nx.to_flat_list(heights) == List.duplicate(1, 10)
-    end
-
-    test "stacked cells give correct heights" do
-      board = Board.new()
-
-      board =
-        board
-        |> List.update_at(19, fn row -> List.replace_at(row, 0, "#ff0000") end)
-        |> List.update_at(18, fn row -> List.replace_at(row, 0, "#ff0000") end)
-        |> List.update_at(17, fn row -> List.replace_at(row, 0, "#ff0000") end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      heights = BoardAnalysis.column_heights(tensor)
-      flat = Nx.to_flat_list(heights)
-      assert hd(flat) == 3
-      assert Enum.sum(tl(flat)) == 0
-    end
-  end
-
-  describe "hole_count/1" do
-    test "no holes on empty board" do
-      tensor = BoardAnalysis.board_to_tensor(Board.new())
-      assert Nx.to_number(BoardAnalysis.hole_count(tensor)) == 0
-    end
-
-    test "detects hole below filled cell" do
-      board = Board.new()
-
-      board =
-        board
-        |> List.update_at(18, fn row -> List.replace_at(row, 0, "#ff0000") end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      assert Nx.to_number(BoardAnalysis.hole_count(tensor)) == 1
-    end
-
-    test "multiple holes in one column" do
-      board = Board.new()
-
-      board =
-        board
-        |> List.update_at(16, fn row -> List.replace_at(row, 0, "#ff0000") end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      assert Nx.to_number(BoardAnalysis.hole_count(tensor)) == 3
-    end
-  end
-
-  describe "bumpiness/1" do
-    test "flat surface has zero bumpiness" do
-      board = Board.new()
-
-      board =
-        List.update_at(board, 19, fn _row ->
-          List.duplicate("#ff0000", 10)
-        end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      heights = BoardAnalysis.column_heights(tensor)
-      assert Nx.to_number(BoardAnalysis.bumpiness(heights)) == 0
-    end
-
-    test "staircase has expected bumpiness" do
-      board = Board.new()
-
-      # Build heights: [1, 2, 3, 0, 0, ...]
-      board =
-        board
-        |> List.update_at(19, fn row -> List.replace_at(row, 0, "#ff0000") end)
-        |> List.update_at(19, fn row -> List.replace_at(row, 1, "#ff0000") end)
-        |> List.update_at(18, fn row -> List.replace_at(row, 1, "#ff0000") end)
-        |> List.update_at(19, fn row -> List.replace_at(row, 2, "#ff0000") end)
-        |> List.update_at(18, fn row -> List.replace_at(row, 2, "#ff0000") end)
-        |> List.update_at(17, fn row -> List.replace_at(row, 2, "#ff0000") end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      heights = BoardAnalysis.column_heights(tensor)
-      bump = Nx.to_number(BoardAnalysis.bumpiness(heights))
-      # heights: [1, 2, 3, 0, 0, ...] -> |1-2| + |2-3| + |3-0| = 1 + 1 + 3 = 5
-      assert bump == 5
-    end
-  end
-
-  describe "complete_lines/1" do
-    test "no complete lines on empty board" do
-      tensor = BoardAnalysis.board_to_tensor(Board.new())
-      assert Nx.to_number(BoardAnalysis.complete_lines(tensor)) == 0
-    end
-
-    test "detects a fully filled row" do
-      board = Board.new()
-
-      board =
-        List.update_at(board, 19, fn _row ->
-          List.duplicate("#ff0000", 10)
-        end)
-
-      tensor = BoardAnalysis.board_to_tensor(board)
-      assert Nx.to_number(BoardAnalysis.complete_lines(tensor)) == 1
-    end
-  end
-
   describe "evaluate/1" do
     test "empty board returns all zeros" do
       result = BoardAnalysis.evaluate(Board.new())
@@ -155,17 +12,147 @@ defmodule Tetris.BoardAnalysisTest do
                aggregate_height: 0,
                holes: 0,
                bumpiness: 0,
-               complete_lines: 0
+               complete_lines: 0,
+               max_height: 0,
+               well_sum: 0
              }
     end
 
-    test "returns consistent metrics for a known board" do
-      board = Board.new()
-
+    test "single filled bottom row" do
       board =
-        board
-        |> List.update_at(19, fn _row -> List.duplicate("#ff0000", 10) end)
-        |> List.update_at(18, fn row -> List.replace_at(row, 0, "#ff0000") end)
+        Board.new()
+        |> List.update_at(19, fn _row ->
+          List.duplicate("#ff0000", 10)
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      assert result.aggregate_height == 10
+      assert result.max_height == 1
+      assert result.holes == 0
+      assert result.bumpiness == 0
+      assert result.complete_lines == 1
+      assert result.well_sum == 0
+    end
+
+    test "stacked cells give correct heights" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+        |> List.update_at(18, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+        |> List.update_at(17, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      assert result.aggregate_height == 3
+      assert result.max_height == 3
+    end
+
+    test "detects hole below filled cell" do
+      board =
+        Board.new()
+        |> List.update_at(18, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      assert result.holes == 1
+      assert result.aggregate_height == 2
+      assert result.max_height == 2
+    end
+
+    test "multiple holes in one column" do
+      board =
+        Board.new()
+        |> List.update_at(16, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      assert result.holes == 3
+      assert result.max_height == 4
+    end
+
+    test "flat surface has zero bumpiness" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn _row ->
+          List.duplicate("#ff0000", 10)
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      assert result.bumpiness == 0
+    end
+
+    test "staircase has expected bumpiness" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+        |> List.update_at(19, fn row ->
+          List.replace_at(row, 1, "#ff0000")
+        end)
+        |> List.update_at(18, fn row ->
+          List.replace_at(row, 1, "#ff0000")
+        end)
+        |> List.update_at(19, fn row ->
+          List.replace_at(row, 2, "#ff0000")
+        end)
+        |> List.update_at(18, fn row ->
+          List.replace_at(row, 2, "#ff0000")
+        end)
+        |> List.update_at(17, fn row ->
+          List.replace_at(row, 2, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      # heights: [1, 2, 3, 0, 0, ...] -> |1-2|+|2-3|+|3-0| = 1+1+3 = 5
+      assert result.bumpiness == 5
+    end
+
+    test "well detection at edges and interior" do
+      # Column 0 has height 0, columns 1-9 have height 1
+      # Column 0 is a well of depth 1 (left wall=20, right=1, min=1, 1-0=1)
+      board =
+        Board.new()
+        |> List.update_at(19, fn row ->
+          row
+          |> List.replace_at(1, "#ff0000")
+          |> List.replace_at(2, "#ff0000")
+          |> List.replace_at(3, "#ff0000")
+          |> List.replace_at(4, "#ff0000")
+          |> List.replace_at(5, "#ff0000")
+          |> List.replace_at(6, "#ff0000")
+          |> List.replace_at(7, "#ff0000")
+          |> List.replace_at(8, "#ff0000")
+          |> List.replace_at(9, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      assert result.well_sum == 1
+    end
+
+    test "returns consistent metrics for a known board" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn _row ->
+          List.duplicate("#ff0000", 10)
+        end)
+        |> List.update_at(18, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
 
       result = BoardAnalysis.evaluate(board)
 

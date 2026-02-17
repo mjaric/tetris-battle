@@ -1,21 +1,30 @@
-# Server
+# Tetris Server
 
-**TODO: Add description**
+Phoenix/Elixir backend for multiplayer Tetris. Server-authoritative: all game logic runs server-side, clients send inputs and render state.
 
-## Installation
+## Setup
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `server` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:server, "~> 0.1.0"}
-  ]
-end
+```bash
+mix setup        # Install dependencies
+mix phx.server   # Start dev server on :4000
+mix test         # Run tests
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/server>.
+## Bot Weight Evolution
 
+Train optimal heuristic weights for the Hard difficulty bot using a genetic algorithm.
+
+```bash
+# Quick test run
+mix bot.evolve --population 10 --generations 5 --games 3
+
+# Full run
+mix bot.evolve --population 50 --generations 100 --games 30
+
+# Distributed (with remote worker)
+mix bot.evolve --workers worker@192.168.1.50 --cookie tetris_evo
+```
+
+Results are saved to `priv/bot_weights.json` (auto-loaded by Hard bots) and `priv/bot_evolution_log.csv` (for charting).
+
+See `docs/notes/bot-evolution.md` for full documentation.

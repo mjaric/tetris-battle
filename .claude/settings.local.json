@@ -14,7 +14,9 @@
       "Bash(npm run build:*)",
       "mcp__context7__resolve-library-id",
       "mcp__tidewave__project_eval",
-      "mcp__tidewave__get_logs"
+      "mcp__tidewave__get_logs",
+      "Bash(mix bot.evolve:*)",
+      "Bash(mix deps.clean:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

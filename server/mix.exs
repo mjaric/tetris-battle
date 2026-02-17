@@ -36,8 +36,7 @@ defmodule Tetris.MixProject do
       {:telemetry_metrics, "~> 1.1.0"},
       {:websock_adapter, "~> 0.5.9"},
       {:mime, "~> 2.0.7"},
-      {:castore, "~> 1.0.17"},
-      {:nx, "~> 0.10.0"}
+      {:castore, "~> 1.0.17"}
     ]
   end
 

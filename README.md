@@ -1,70 +1,47 @@
-# Getting Started with Create React App
+# Tetris
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Multiplayer Tetris battle game. React frontend + Elixir/Phoenix backend communicating over WebSocket channels.
 
-## Available Scripts
+## Architecture
 
-In the project directory, you can run:
+Server-authoritative: all game logic runs server-side, clients send inputs and render state. The server broadcasts complete game state to all players every 50ms (20 FPS tick loop).
 
-### `npm start`
+```
+client/    React frontend (port 3000)
+server/    Elixir/Phoenix backend (port 4000)
+docs/      Project documentation and notes
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Quick Start
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+# Server
+cd server && mix setup && mix phx.server
 
-### `npm test`
+# Client (separate terminal)
+cd client && npm install && npm start
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The client connects to `ws://localhost:4000/socket` (configurable via `REACT_APP_SOCKET_URL`).
 
-### `npm run build`
+## Game Modes
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **Solo** — client-side only via `useTetris` hook, no server involvement
+- **Multiplayer** — server-authoritative rooms with bot players (Easy/Medium/Hard difficulty)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Bot Training
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The Hard bot's heuristic weights are evolved via genetic algorithm. The GA simulates thousands of headless games with pruned 2-piece lookahead, selecting weight vectors that maximize average lines cleared.
 
-### `npm run eject`
+```bash
+cd server
+mix bot.evolve --population 50 --generations 100 --games 30
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Supports distributed evaluation across multiple BEAM nodes. See `docs/notes/bot-evolution.md`.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Documentation
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `docs/notes/bot-evolution.md` — GA pipeline, distributed training, all options
+- `docs/notes/bot-performance.md` — Bot strengths, weaknesses, improvement roadmap
+- `docs/notes/run-notes.md` — Evolution run observations and optimization history

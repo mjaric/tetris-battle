@@ -12,13 +12,38 @@ defmodule Tetris.BotStrategy do
 
   @type difficulty :: :easy | :medium | :hard
 
-  @weights %{
-    easy: %{height: 0.30, holes: 0.50, bumpiness: 0.20, lines: 0.50},
-    medium: %{height: 0.51, holes: 0.36, bumpiness: 0.18, lines: 0.76},
-    hard: %{height: 0.51, holes: 0.36, bumpiness: 0.18, lines: 0.76}
+  @default_weights %{
+    easy: %{
+      height: 0.30, holes: 0.50, bumpiness: 0.20,
+      lines: 0.50, max_height: 0.0, wells: 0.0
+    },
+    medium: %{
+      height: 0.51, holes: 0.36, bumpiness: 0.18,
+      lines: 0.76, max_height: 0.0, wells: 0.0
+    },
+    hard: %{
+      height: 0.51, holes: 0.36, bumpiness: 0.18,
+      lines: 0.76, max_height: 0.0, wells: 0.0
+    }
   }
 
   @noise %{easy: 0.20, medium: 0.05, hard: 0.0}
+
+  @doc """
+  Returns heuristic weights for the given difficulty.
+
+  For `:hard`, loads evolved weights from `priv/bot_weights.json`
+  if the file exists. Easy/Medium use hardcoded defaults.
+  """
+  @spec weights_for(difficulty()) :: map()
+  def weights_for(:hard) do
+    case load_evolved_weights() do
+      {:ok, weights} -> weights
+      :error -> @default_weights[:hard]
+    end
+  end
+
+  def weights_for(diff), do: @default_weights[diff]
 
   @doc """
   Finds the best placement for the current piece.
@@ -43,7 +68,7 @@ defmodule Tetris.BotStrategy do
         score_with_lookahead(placements, next_piece, diff)
       else
         Enum.map(placements, fn pl ->
-          score = score_placement(pl.metrics, @weights[diff])
+          score = score_placement(pl.metrics, weights_for(diff))
           {score, pl}
         end)
       end
@@ -71,7 +96,9 @@ defmodule Tetris.BotStrategy do
     -weights.height * metrics.aggregate_height -
       weights.holes * metrics.holes -
       weights.bumpiness * metrics.bumpiness +
-      weights.lines * metrics.complete_lines
+      weights.lines * metrics.complete_lines -
+      Map.get(weights, :max_height, 0.0) * Map.get(metrics, :max_height, 0) -
+      Map.get(weights, :wells, 0.0) * Map.get(metrics, :well_sum, 0)
   end
 
   @doc """
@@ -146,12 +173,12 @@ defmodule Tetris.BotStrategy do
         else
           next_placements
           |> Enum.map(fn np ->
-            score_placement(np.metrics, @weights[diff])
+            score_placement(np.metrics, weights_for(diff))
           end)
           |> Enum.max()
         end
 
-      current_score = score_placement(pl.metrics, @weights[diff])
+      current_score = score_placement(pl.metrics, weights_for(diff))
       {current_score + best_next_score, pl}
     end)
   end
@@ -190,5 +217,28 @@ defmodule Tetris.BotStrategy do
       [] -> 0
       indices -> Enum.max(indices) - Enum.min(indices) + 1
     end)
+  end
+
+  defp load_evolved_weights do
+    path =
+      :code.priv_dir(:tetris)
+      |> to_string()
+      |> Path.join("bot_weights.json")
+
+    with {:ok, contents} <- File.read(path),
+         {:ok, data} <- Jason.decode(contents),
+         %{"weights" => w} <- data do
+      {:ok,
+       %{
+         height: w["height"] || 0.0,
+         holes: w["holes"] || 0.0,
+         bumpiness: w["bumpiness"] || 0.0,
+         lines: w["lines"] || 0.0,
+         max_height: w["max_height"] || 0.0,
+         wells: w["wells"] || 0.0
+       }}
+    else
+      _ -> :error
+    end
   end
 end
