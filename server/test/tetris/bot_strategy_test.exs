@@ -122,18 +122,20 @@ defmodule Tetris.BotStrategyTest do
 
   describe "score_battle_placement/3" do
     @battle_weights %{
-      height: 0.2,
-      holes: 0.2,
-      bumpiness: 0.1,
-      lines: 0.1,
-      max_height: 0.05,
+      height: 0.40,
+      holes: 0.35,
+      bumpiness: 0.15,
+      lines: 0.30,
+      max_height: 0.10,
       wells: 0.05,
-      garbage_incoming: 0.1,
-      garbage_send: 0.05,
-      tetris_bonus: 0.05,
-      opponent_danger: 0.05,
-      survival: 0.03,
-      line_efficiency: 0.02
+      row_transitions: 0.10,
+      column_transitions: 0.10,
+      garbage_pressure: 0.20,
+      attack_bonus: 0.15,
+      danger_aggression: 0.10,
+      survival_height: 0.15,
+      tetris_bonus: 0.10,
+      line_efficiency: 0.05
     }
 
     test "penalizes high placements when garbage is pending" do

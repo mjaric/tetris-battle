@@ -20,13 +20,13 @@ A beginner-friendly walkthrough of how our Tetris bot learns to play — from th
 
 Imagine you're breeding dogs. You start with a random group of dogs, pick the ones that are best at fetching, let them have puppies, and repeat for many generations. Eventually you get dogs that are incredible at fetching — even though nobody taught them how. That's a genetic algorithm (GA).
 
-In our Tetris bot, we're "breeding" **weight vectors** — sets of 6 numbers that tell the bot what matters when placing a Tetris piece. Instead of dogs, we have bots. Instead of fetching, we measure how many lines they clear.
+In our Tetris bot, we're "breeding" **weight vectors** — sets of numbers that tell the bot what matters when placing a Tetris piece. Solo mode uses 8 weights; battle mode uses 14 (the 8 solo weights plus 6 multiplayer interaction terms). Instead of dogs, we have bots. Instead of fetching, we measure how many lines they clear (solo) or how well they perform in 4-player battles.
 
 ### The Vocabulary
 
 | Biology Term | Our Code Term | What It Means |
 |---|---|---|
-| Chromosome | `genome` (weight map) | A set of 6 numbers that defines a bot's "brain" |
+| Chromosome | `genome` (weight map) | A set of 8 (solo) or 14 (battle) numbers that defines a bot's "brain" |
 | Gene | Single weight (e.g. `holes: 0.35`) | One number in the weight vector |
 | Population | List of 50 genomes | The current group of bot brains |
 | Fitness | Average lines cleared | How good a genome is at playing Tetris |
@@ -39,20 +39,39 @@ In our Tetris bot, we're "breeding" **weight vectors** — sets of 6 numbers tha
 
 ### What's Inside a Genome?
 
-A genome is a map of 6 weights. Each weight controls how much the bot cares about one aspect of the board:
+A solo genome is a map of 8 weights. Each weight controls how much the bot cares about one aspect of the board:
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                    Example Genome                            │
-├──────────────┬───────────────────────────────────────────────┤
-│  height      │  0.0000  — "I don't care about total height" │
-│  holes       │  0.3546  — "I really hate holes"             │
-│  bumpiness   │  0.0849  — "I slightly prefer flat surfaces" │
-│  lines       │  0.3763  — "I love clearing lines"           │
-│  max_height  │  0.0000  — "Tallest column? Doesn't matter"  │
-│  wells       │  0.1841  — "Avoid deep wells"                │
-└──────────────┴───────────────────────────────────────────────┘
-  Weights are normalized so they sum to 1.0
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Example Solo Genome (8 weights)                      │
+├─────────────────────┬───────────────────────────────────────────────────┤
+│  height             │  0.0000  — "I don't care about total height"     │
+│  holes              │  0.3546  — "I really hate holes"                 │
+│  bumpiness          │  0.0849  — "I slightly prefer flat surfaces"     │
+│  lines              │  0.3763  — "I love clearing lines"               │
+│  max_height         │  0.0000  — "Tallest column? Doesn't matter"      │
+│  wells              │  0.1841  — "Avoid deep wells"                    │
+│  row_transitions    │  0.0001  — "Smooth rows are slightly better"     │
+│  column_transitions │  0.0000  — "Column roughness? Not a priority"    │
+└─────────────────────┴───────────────────────────────────────────────────┘
+  Solo weights are normalized so they sum to 1.0
+```
+
+Battle genomes add 6 multiplayer interaction terms (14 weights total, not normalized):
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│            Additional Battle Weights (6 interaction terms)              │
+├─────────────────────┬───────────────────────────────────────────────────┤
+│  garbage_pressure   │  0.20  — "Be cautious when garbage is incoming"  │
+│  attack_bonus       │  0.15  — "Send garbage when opponents are tall"  │
+│  danger_aggression  │  0.10  — "Clear lines when opponents are dying"  │
+│  survival_height    │  0.15  — "Play safe when my board is high"       │
+│  tetris_bonus       │  0.10  — "Bonus for 4-line clears"              │
+│  line_efficiency    │  0.05  — "Multi-line clears are quadratically   │
+│                     │          better"                                  │
+└─────────────────────┴───────────────────────────────────────────────────┘
+  Battle weights are clamped to [0.0, 2.0] independently
 ```
 
 ### How One Generation Works
@@ -83,27 +102,26 @@ flowchart TD
 When two parent genomes are selected, each gene in the child is randomly taken from one parent or the other (50/50 coin flip):
 
 ```
-Parent A:   height=0.12   holes=0.35   bumpiness=0.08   lines=0.25   max_height=0.10   wells=0.10
-               ↓             ↓              ↓               ↓              ↓               ↓
-Coin flip:     A              B              A               B              A               B
-               ↓             ↓              ↓               ↓              ↓               ↓
-Child:      height=0.12   holes=0.??   bumpiness=0.08   lines=0.??   max_height=0.10   wells=0.??
-                          (from B)                       (from B)                        (from B)
+Parent A:   height=0.12  holes=0.35  bumpy=0.08  lines=0.25  max_h=0.10  wells=0.10  row_t=0.05  col_t=0.03
+               ↓            ↓           ↓           ↓            ↓           ↓           ↓           ↓
+Coin flip:     A             B           A           B            A           B           A           B
+               ↓            ↓           ↓           ↓            ↓           ↓           ↓           ↓
+Child:      height=0.12  holes=??    bumpy=0.08  lines=??     max_h=0.10  wells=??    row_t=0.05  col_t=??
 
-Parent B:   height=0.05   holes=0.42   bumpiness=0.15   lines=0.18   max_height=0.05   wells=0.15
+Parent B:   height=0.05  holes=0.42  bumpy=0.15  lines=0.18  max_h=0.05  wells=0.15  row_t=0.02  col_t=0.08
 ```
 
-After crossover, mutation adds small Gaussian noise to each gene (with 30% probability per gene), and the result is normalized so weights sum to 1.0.
+After crossover, mutation adds small Gaussian noise to each gene (with 30% probability per gene). Solo weights are then normalized to sum to 1.0. Battle weights are clamped to [0.0, 2.0] without normalization.
 
 ---
 
 ## Part 2: How the Bot Evaluates a Board
 
-Before the bot can decide where to place a piece, it needs a way to judge how "good" a board looks. We measure 6 properties of every board state.
+Before the bot can decide where to place a piece, it needs a way to judge how "good" a board looks. We measure 8 properties of every board state.
 
 > **Code reference:** `Tetris.BoardAnalysis.evaluate/1` in `lib/tetris/board_analysis.ex:27`
 
-### The 6 Board Metrics
+### The 8 Board Metrics
 
 #### 1. Aggregate Height — sum of all column heights
 
@@ -209,22 +227,60 @@ Well depth = min(5, 5) - 2 = 3
 
 **Lower is better.** Deep wells are hard to fill without I-pieces.
 
-### The Scoring Formula
+#### 7. Row Transitions — fill-state changes along each row
 
-The bot combines these 6 metrics into a single score using weighted sums:
+For each row, count adjacent cell pairs where the fill state differs (filled vs. empty). Board edges count as filled.
 
 ```
-score = - weight_height     × aggregate_height
-        - weight_holes      × holes
-        - weight_bumpiness  × bumpiness
-        + weight_lines      × complete_lines
-        - weight_max_height × max_height
-        - weight_wells      × well_sum
+Row:     edge ■ ■ ■ . . ■ ■ . ■ ■ edge
+                      ↑ ↑     ↑ ↑
+              filled→empty  empty→filled  (4 transitions in this row)
+
+Empty row:  edge . . . . . . . . . . edge  → 2 transitions (edge→empty, empty→edge)
+Full row:   edge ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ edge  → 0 transitions
+```
+
+**Lower is better.** Fewer transitions means the board surface is smoother with fewer fragmented gaps.
+
+#### 8. Column Transitions — fill-state changes along each column
+
+Same concept vertically. Ceiling counts as empty, floor counts as filled.
+
+```
+Column (top to bottom):
+    ceiling (empty)
+    .  (empty)       → 0 transitions (same)
+    .  (empty)       → 0
+    ■  (filled)      → 1 transition (empty→filled)
+    .  (empty)       → 1 transition (filled→empty = hole!)
+    ■  (filled)      → 1 transition (empty→filled)
+    ■  (filled)      → 0
+    floor (filled)   → 0
+                       Total: 3 transitions
+```
+
+**Lower is better.** Column transitions detect buried holes — each hole creates at least 2 transitions.
+
+### The Scoring Formula
+
+The bot combines these 8 metrics into a single score using weighted sums:
+
+```
+score = - weight_height             × aggregate_height
+        - weight_holes              × holes
+        - weight_bumpiness          × bumpiness
+        + weight_lines              × complete_lines
+        - weight_max_height         × max_height
+        - weight_wells              × well_sum
+        - weight_row_transitions    × row_transitions
+        - weight_column_transitions × column_transitions
 ```
 
 Notice: **lines cleared is positive** (good), everything else is **negative** (bad). The bot maximizes this score.
 
-> **Code reference:** `Tetris.BotStrategy.score_placement/2` in `lib/tetris/bot_strategy.ex:94`
+In **battle mode**, 6 additional interaction terms are added that use both post-placement board state and multiplayer context (garbage pending, opponent heights). See `score_battle_terms/3` for details.
+
+> **Code reference:** `Tetris.BotStrategy.score_placement/2` in `lib/tetris/bot_strategy.ex:182`
 
 ### Worked Example
 
@@ -496,7 +552,7 @@ loop:
 
 ```mermaid
 flowchart TD
-    A["Initialize random<br>population of 50 genomes"] --> B["For each genome:<br>play 10 headless games"]
+    A["Initialize random<br>population of 50 genomes<br>(8 weights each)"] --> B["For each genome:<br>play 10 headless games"]
     B --> C["Fitness = avg lines<br>cleared across 10 games"]
     C --> D["Rank all 50 genomes<br>by fitness"]
     D --> E["Report generation stats<br>(best/avg/worst fitness)"]
@@ -710,10 +766,10 @@ The orchestrator auto-detects its LAN IP, starts Erlang distribution, connects t
 ### CLI Commands
 
 ```bash
-# Local evolution (uses all CPU cores)
+# Solo evolution (8 weights, uses all CPU cores)
 mix bot.evolve
 
-# Full options
+# Solo with full options
 mix bot.evolve \
   --population 50    # -p  Population size (default: 50)
   --generations 100  # -g  Number of generations (default: 100)
@@ -728,7 +784,11 @@ mix bot.evolve \
   --elitism 2        #     Elites kept per generation (default: 2)
   --immigrants 5     #     Random genomes per generation (default: 5)
 
-# Distributed evolution
+# Battle evolution (14 weights)
+mix bot.evolve.battle
+mix bot.evolve.battle --population 30 --generations 15 --battles 20
+
+# Distributed evolution (solo or battle)
 mix bot.evolve \
   --workers worker@192.168.1.50,worker@192.168.1.51 \  # -w
   --cookie tetris_evo
@@ -741,27 +801,31 @@ mix bot.evolve \
 
 | File | Role |
 |---|---|
-| `lib/tetris/board_analysis.ex` | Computes 6 heuristic metrics from a board |
-| `lib/tetris/bot_strategy.ex` | Enumerates placements, scores them, plans actions |
+| `lib/tetris/board_analysis.ex` | Computes 8 heuristic metrics from a board |
+| `lib/tetris/bot_strategy.ex` | Enumerates placements, scores them (solo 8-weight + battle 14-weight), plans actions |
 | `lib/tetris_game/bot_player.ex` | Real-time bot GenServer (waiting/thinking/executing) |
-| `lib/bot_trainer/simulation.ex` | Headless game loop for fast evaluation |
-| `lib/bot_trainer/evolution.ex` | Genetic algorithm: selection, crossover, mutation |
+| `lib/bot_trainer/simulation.ex` | Headless solo game loop for fast evaluation |
+| `lib/bot_trainer/battle_simulation.ex` | Headless 4-player battle simulation |
+| `lib/bot_trainer/evolution.ex` | Genetic algorithm: selection, crossover, mutation (solo + battle) |
 | `lib/bot_trainer/cluster.ex` | Erlang distribution: connect workers, push modules |
-| `lib/mix/tasks/bot.evolve.ex` | CLI entry point with all flags and output |
+| `lib/mix/tasks/bot.evolve.ex` | Solo evolution CLI (8 weights) |
+| `lib/mix/tasks/bot.evolve.battle.ex` | Battle evolution CLI (14 weights) |
 | `bin/worker.sh` | Shell script to start a worker BEAM node |
-| `priv/bot_weights.json` | Evolved weights loaded by hard-mode bots |
-| `priv/bot_evolution_log.csv` | CSV log of fitness per generation |
+| `priv/bot_weights.json` | Evolved solo weights loaded by hard-mode bots |
+| `priv/bot_evolution_log.csv` | Solo evolution CSV log |
+| `priv/battle_weights.json` | Evolved battle weights loaded by battle-mode bots |
+| `priv/battle_evolution_log.csv` | Battle evolution CSV log |
 
 ### Glossary
 
 | Term | Definition |
 |---|---|
-| **Genome** | A map of 6 weights (`height`, `holes`, `bumpiness`, `lines`, `max_height`, `wells`) |
-| **Fitness** | Average lines cleared across N games using a genome's weights |
+| **Genome** | A map of 8 weights (solo: `height`, `holes`, `bumpiness`, `lines`, `max_height`, `wells`, `row_transitions`, `column_transitions`) or 14 weights (battle: + `garbage_pressure`, `attack_bonus`, `danger_aggression`, `survival_height`, `tetris_bonus`, `line_efficiency`) |
+| **Fitness** | Solo: average lines cleared. Battle: composite score from placement, survival, lines cleared, and garbage sent |
 | **Generation** | One cycle of: evaluate all genomes → select → breed → next population |
 | **Tournament selection** | Pick k random genomes, keep the fittest |
 | **Uniform crossover** | Each gene randomly from parent A or B (50/50 coin flip) |
-| **Gaussian mutation** | Add `normal(0, sigma)` noise to a gene, clamped to [0, 1] |
+| **Gaussian mutation** | Add `normal(0, sigma)` noise to a gene, clamped to [0, 1] (solo) or [0, 2] (battle) |
 | **Elitism** | Top N genomes copied unchanged to next generation |
 | **Immigration** | N random genomes added each generation to maintain diversity |
 | **Lookahead** | Evaluating placements for both current and next piece |

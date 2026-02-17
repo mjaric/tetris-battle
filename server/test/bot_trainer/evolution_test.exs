@@ -3,7 +3,11 @@ defmodule BotTrainer.EvolutionTest do
 
   alias BotTrainer.Evolution
 
-  @weights [:height, :holes, :bumpiness, :lines, :max_height, :wells]
+  @weights [
+    :height, :holes, :bumpiness, :lines,
+    :max_height, :wells,
+    :row_transitions, :column_transitions
+  ]
 
   describe "random_population/1" do
     test "generates correct number of genomes" do
@@ -43,7 +47,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 1.0,
         lines: 4.0,
         max_height: 0.0,
-        wells: 0.0
+        wells: 0.0,
+        row_transitions: 0.0,
+        column_transitions: 0.0
       }
 
       normalized = Evolution.normalize(genome)
@@ -64,7 +70,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 0.0,
         lines: 0.0,
         max_height: 0.0,
-        wells: 0.0
+        wells: 0.0,
+        row_transitions: 0.0,
+        column_transitions: 0.0
       }
 
       normalized = Evolution.normalize(genome)
@@ -84,7 +92,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 0.3,
         lines: 0.4,
         max_height: 0.05,
-        wells: 0.15
+        wells: 0.15,
+        row_transitions: 0.08,
+        column_transitions: 0.12
       }
 
       b = %{
@@ -93,7 +103,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 0.7,
         lines: 0.8,
         max_height: 0.35,
-        wells: 0.45
+        wells: 0.45,
+        row_transitions: 0.25,
+        column_transitions: 0.35
       }
 
       child = Evolution.crossover(a, b)
@@ -112,7 +124,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 0.2,
         lines: 0.2,
         max_height: 0.1,
-        wells: 0.1
+        wells: 0.1,
+        row_transitions: 0.05,
+        column_transitions: 0.05
       }
 
       mutated = Evolution.mutate(genome, 0.0, 0.1)
@@ -126,7 +140,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 0.5,
         lines: 0.5,
         max_height: 0.5,
-        wells: 0.5
+        wells: 0.5,
+        row_transitions: 0.5,
+        column_transitions: 0.5
       }
 
       any_changed =
@@ -145,7 +161,9 @@ defmodule BotTrainer.EvolutionTest do
         bumpiness: 0.5,
         lines: 0.5,
         max_height: 0.01,
-        wells: 0.99
+        wells: 0.99,
+        row_transitions: 0.01,
+        column_transitions: 0.99
       }
 
       for _ <- 1..50 do
@@ -214,11 +232,13 @@ defmodule BotTrainer.EvolutionTest do
     :lines,
     :max_height,
     :wells,
-    :garbage_incoming,
-    :garbage_send,
+    :row_transitions,
+    :column_transitions,
+    :garbage_pressure,
+    :attack_bonus,
+    :danger_aggression,
+    :survival_height,
     :tetris_bonus,
-    :opponent_danger,
-    :survival,
     :line_efficiency
   ]
 
@@ -242,7 +262,7 @@ defmodule BotTrainer.EvolutionTest do
   end
 
   describe "battle mode" do
-    test "random_battle_population generates 12-key genomes" do
+    test "random_battle_population generates 14-key genomes" do
       pop = Evolution.random_battle_population(5)
       assert length(pop) == 5
 
@@ -254,16 +274,14 @@ defmodule BotTrainer.EvolutionTest do
       end
     end
 
-    test "battle genomes are normalized to sum ~1.0" do
+    test "battle genomes have weights in valid range" do
       pop = Evolution.random_battle_population(10)
 
       for genome <- pop do
-        total =
-          Enum.reduce(@battle_weights, 0.0, fn k, acc ->
-            acc + genome[k]
-          end)
-
-        assert_in_delta total, 1.0, 0.001
+        for key <- @battle_weights do
+          assert genome[key] >= 0.0, "#{key} below 0"
+          assert genome[key] <= 1.0, "#{key} above 1"
+        end
       end
     end
 

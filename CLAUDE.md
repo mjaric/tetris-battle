@@ -53,7 +53,7 @@ Each game room is a `TetrisGame.GameRoom` GenServer spawned under `RoomSuperviso
 
 ### Server Module Layers
 
-- **`Tetris.*`** — Pure game logic (no side effects): `Piece`, `Board`, `WallKicks`, `GameLogic`, `PlayerState`
+- **`Tetris.*`** — Pure game logic (no side effects): `Piece`, `Board`, `WallKicks`, `GameLogic`, `PlayerState`, `BoardAnalysis` (8-metric board evaluation), `BotStrategy` (placement scoring for solo 8-weight and battle 14-weight modes)
 - **`TetrisGame.*`** — Stateful processes: `Lobby` (room registry), `GameRoom` (per-room engine), `RoomSupervisor`
 - **`TetrisWeb.*`** — Network boundary: `LobbyChannel` (`lobby:main`), `GameChannel` (`game:{room_id}`), `UserSocket`, `Endpoint`
 

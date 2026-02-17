@@ -1,17 +1,19 @@
 {
   "config": {
-    "population_size": 30,
-    "generations": 100,
-    "games_per_genome": 50
+    "population_size": 10,
+    "generations": 10,
+    "games_per_genome": 10
   },
-  "evolved_at": "2026-02-17T14:07:07.272024Z",
-  "fitness": 136.96,
+  "evolved_at": "2026-02-17T22:27:29.095715Z",
+  "fitness": 203.8,
   "weights": {
-    "lines": 0.3689,
-    "height": 0.0,
-    "holes": 0.3415,
-    "bumpiness": 0.0834,
-    "max_height": 0.0,
-    "wells": 0.2062
+    "lines": 0.0677,
+    "height": 0.1291,
+    "holes": 0.1577,
+    "bumpiness": 0.0325,
+    "max_height": 0.073,
+    "wells": 0.1474,
+    "row_transitions": 0.2397,
+    "column_transitions": 0.1528
   }
 }

@@ -12,7 +12,9 @@ mix test         # Run tests
 
 ## Bot Weight Evolution
 
-Train optimal heuristic weights for the Hard difficulty bot using a genetic algorithm.
+### Solo (Hard difficulty)
+
+Train optimal heuristic weights (8 features) for the Hard difficulty bot using a genetic algorithm.
 
 ```bash
 # Quick test run
@@ -25,6 +27,25 @@ mix bot.evolve --population 50 --generations 100 --games 30
 mix bot.evolve --workers worker@192.168.1.50 --cookie tetris_evo
 ```
 
-Results are saved to `priv/bot_weights.json` (auto-loaded by Hard bots) and `priv/bot_evolution_log.csv` (for charting).
+Results: `priv/bot_weights.json` (auto-loaded by Hard bots), `priv/bot_evolution_log.csv` (for charting).
+
+### Battle
+
+Train battle-aware bot weights (14 features) with multiplayer context: garbage pressure, attack incentives, survival, and opponent awareness.
+
+```bash
+# Quick test run
+mix bot.evolve.battle --population 6 --generations 3 --battles 5
+
+# Full run
+mix bot.evolve.battle --population 30 --generations 15 --battles 20
+
+# Distributed
+mix bot.evolve.battle --workers worker@192.168.1.50 --cookie tetris_evo
+```
+
+Results: `priv/battle_weights.json` (auto-loaded by Battle bots), `priv/battle_evolution_log.csv`.
+
+Battle evolution uses adaptive opponents (solo-trained bots initially, switching to co-evolution on stagnation).
 
 See `docs/notes/bot-evolution.md` for full documentation.

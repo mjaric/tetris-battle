@@ -233,7 +233,7 @@ defmodule Mix.Tasks.Bot.Evolve do
     msg =
       :io_lib.format(
         "Gen ~3B | Best: ~6.1f lines | Avg: ~6.1f | " <>
-          "W: h=~.2f o=~.2f b=~.2f l=~.2f m=~.2f w=~.2f",
+          "W: h=~.2f o=~.2f b=~.2f l=~.2f m=~.2f w=~.2f rt=~.2f ct=~.2f",
         [
           stats.generation,
           stats.best_fitness,
@@ -243,7 +243,9 @@ defmodule Mix.Tasks.Bot.Evolve do
           w.bumpiness,
           w.lines,
           w.max_height,
-          w.wells
+          w.wells,
+          w.row_transitions,
+          w.column_transitions
         ]
       )
 
@@ -254,7 +256,8 @@ defmodule Mix.Tasks.Bot.Evolve do
     header =
       "generation,best_fitness,avg_fitness,worst_fitness," <>
         "best_height,best_holes,best_bumpiness,best_lines," <>
-        "best_max_height,best_wells\n"
+        "best_max_height,best_wells," <>
+        "best_row_transitions,best_column_transitions\n"
 
     File.write!(path, header)
   end
@@ -264,7 +267,7 @@ defmodule Mix.Tasks.Bot.Evolve do
 
     row =
       :io_lib.format(
-        "~B,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f~n",
+        "~B,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f,~.4f~n",
         [
           stats.generation,
           stats.best_fitness,
@@ -275,7 +278,9 @@ defmodule Mix.Tasks.Bot.Evolve do
           w.bumpiness,
           w.lines,
           w.max_height,
-          w.wells
+          w.wells,
+          w.row_transitions,
+          w.column_transitions
         ]
       )
 
@@ -290,7 +295,9 @@ defmodule Mix.Tasks.Bot.Evolve do
         bumpiness: Float.round(genome.bumpiness, 4),
         lines: Float.round(genome.lines, 4),
         max_height: Float.round(genome.max_height, 4),
-        wells: Float.round(genome.wells, 4)
+        wells: Float.round(genome.wells, 4),
+        row_transitions: Float.round(genome.row_transitions, 4),
+        column_transitions: Float.round(genome.column_transitions, 4)
       },
       fitness: Float.round(fitness, 2),
       config: %{
@@ -362,12 +369,14 @@ defmodule Mix.Tasks.Bot.Evolve do
     ====================================
     Best fitness: #{Float.round(fitness, 2)} avg lines/game
     Weights:
-      height:     #{Float.round(genome.height, 4)}
-      holes:      #{Float.round(genome.holes, 4)}
-      bumpiness:  #{Float.round(genome.bumpiness, 4)}
-      lines:      #{Float.round(genome.lines, 4)}
-      max_height: #{Float.round(genome.max_height, 4)}
-      wells:      #{Float.round(genome.wells, 4)}
+      height:             #{Float.round(genome.height, 4)}
+      holes:              #{Float.round(genome.holes, 4)}
+      bumpiness:          #{Float.round(genome.bumpiness, 4)}
+      lines:              #{Float.round(genome.lines, 4)}
+      max_height:         #{Float.round(genome.max_height, 4)}
+      wells:              #{Float.round(genome.wells, 4)}
+      row_transitions:    #{Float.round(genome.row_transitions, 4)}
+      column_transitions: #{Float.round(genome.column_transitions, 4)}
 
     Saved to: #{output_path}
     CSV log:  #{log_path}

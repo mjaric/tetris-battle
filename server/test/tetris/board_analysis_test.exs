@@ -8,13 +8,17 @@ defmodule Tetris.BoardAnalysisTest do
     test "empty board returns all zeros" do
       result = BoardAnalysis.evaluate(Board.new())
 
+      # Empty rows: each has 2 transitions (edge→nil, nil→edge) = 20*2 = 40
+      # Empty columns: each has 1 transition (empty→floor) = 10
       assert result == %{
                aggregate_height: 0,
                holes: 0,
                bumpiness: 0,
                complete_lines: 0,
                max_height: 0,
-               well_sum: 0
+               well_sum: 0,
+               row_transitions: 40,
+               column_transitions: 10
              }
     end
 
@@ -142,6 +146,54 @@ defmodule Tetris.BoardAnalysisTest do
       result = BoardAnalysis.evaluate(board)
 
       assert result.well_sum == 1
+    end
+
+    test "full bottom row has expected row transitions" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn _row ->
+          List.duplicate("#ff0000", 10)
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      # Full row: edge-filled transitions = 0, all cells filled = 0
+      # 19 empty rows: each has 2 transitions (edge→nil, nil→edge)
+      assert result.row_transitions == 38
+    end
+
+    test "single cell creates correct transition count" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn row ->
+          List.replace_at(row, 4, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      # Row 19: edge(filled)→nil→nil→nil→nil→filled→nil→nil→nil→nil→nil→edge(filled)
+      # Transitions: edge→nil(1), nil→filled(1), filled→nil(1), nil→edge(1) = 4
+      # Plus 19 empty rows * 2 = 38
+      assert result.row_transitions == 42
+    end
+
+    test "column with gap has expected column transitions" do
+      board =
+        Board.new()
+        |> List.update_at(19, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+        |> List.update_at(17, fn row ->
+          List.replace_at(row, 0, "#ff0000")
+        end)
+
+      result = BoardAnalysis.evaluate(board)
+
+      # Column 0: ceiling(empty)→...→empty→filled(row17)→empty(row18)→filled(row19)→floor(filled)
+      # Transitions: empty→filled(1), filled→empty(1), empty→filled(1), filled→floor(0) = 3
+      # Plus ceiling→empty = 0 (both empty)
+      # Columns 1-9: ceiling(empty)→...all empty...→floor(filled) = 1 each = 9
+      assert result.column_transitions == 12
     end
 
     test "returns consistent metrics for a known board" do

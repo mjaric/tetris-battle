@@ -1,23 +1,25 @@
 {
   "config": {
-    "population_size": 10,
+    "population_size": 30,
     "generations": 15,
-    "battles_per_genome": 50
+    "battles_per_genome": 20
   },
-  "evolved_at": "2026-02-17T21:28:52.255262Z",
-  "fitness": 51.2493,
+  "evolved_at": "2026-02-17T22:54:55.251124Z",
+  "fitness": 87.9533,
   "weights": {
-    "lines": 0.1176,
-    "height": 0.028,
-    "holes": 0.1118,
-    "bumpiness": 0.0496,
-    "max_height": 0.0006,
-    "wells": 0.0793,
-    "garbage_incoming": 0.0006,
-    "garbage_send": 0.1263,
-    "tetris_bonus": 0.0739,
-    "opponent_danger": 0.0,
-    "survival": 0.2624,
-    "line_efficiency": 0.15
+    "lines": 0.2928,
+    "height": 0.1071,
+    "holes": 1.1617,
+    "bumpiness": 0.0068,
+    "max_height": 0.2028,
+    "wells": 1.0466,
+    "row_transitions": 0.8735,
+    "column_transitions": 0.7506,
+    "garbage_pressure": 0.1262,
+    "attack_bonus": 0.4951,
+    "danger_aggression": 0.3835,
+    "survival_height": 0.0652,
+    "tetris_bonus": 0.1273,
+    "line_efficiency": 0.7435
   }
 }
