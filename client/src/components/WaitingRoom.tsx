@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Channel } from "phoenix";
 import type { GameState } from "../types.ts";
 
-type Difficulty = "easy" | "medium" | "hard";
+type Difficulty = "easy" | "medium" | "hard" | "battle";
 
 interface WaitingRoomProps {
   gameState: GameState | null;
@@ -85,6 +85,7 @@ export default function WaitingRoom({
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
+            <option value="battle">Battle</option>
           </select>
           <button
             onClick={addBot}

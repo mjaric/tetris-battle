@@ -74,6 +74,7 @@ defmodule TetrisWeb.GameChannel do
         "easy" -> :easy
         "medium" -> :medium
         "hard" -> :hard
+        "battle" -> :battle
         _ -> raise ArgumentError, "invalid difficulty: #{difficulty}"
       end
 
