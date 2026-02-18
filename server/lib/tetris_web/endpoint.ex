@@ -13,12 +13,13 @@ defmodule TetrisWeb.Endpoint do
     plug(Tidewave)
   end
 
-  plug TetrisWeb.CorsPlug
+  plug(TetrisWeb.CorsPlug)
 
-  plug Plug.Static,
+  plug(Plug.Static,
     at: "/",
     from: {:tetris, "priv/static"},
     gzip: true
+  )
 
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

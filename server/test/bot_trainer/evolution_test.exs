@@ -4,9 +4,14 @@ defmodule BotTrainer.EvolutionTest do
   alias BotTrainer.Evolution
 
   @weights [
-    :height, :holes, :bumpiness, :lines,
-    :max_height, :wells,
-    :row_transitions, :column_transitions
+    :height,
+    :holes,
+    :bumpiness,
+    :lines,
+    :max_height,
+    :wells,
+    :row_transitions,
+    :column_transitions
   ]
 
   describe "random_population/1" do
