@@ -22,7 +22,9 @@ defmodule Tetris.BoardAnalysis do
           bumpiness: non_neg_integer(),
           complete_lines: non_neg_integer(),
           max_height: non_neg_integer(),
-          well_sum: non_neg_integer()
+          well_sum: non_neg_integer(),
+          row_transitions: non_neg_integer(),
+          column_transitions: non_neg_integer()
         }
   def evaluate(board) do
     {heights, holes, complete_lines} = scan_board(board)
@@ -33,7 +35,9 @@ defmodule Tetris.BoardAnalysis do
       bumpiness: bumpiness(heights),
       complete_lines: complete_lines,
       max_height: max_val(heights, 0, 0),
-      well_sum: well_sum(heights)
+      well_sum: well_sum(heights),
+      row_transitions: row_transitions(board),
+      column_transitions: column_transitions(board)
     }
   end
 
@@ -149,5 +153,35 @@ defmodule Tetris.BoardAnalysis do
   defp max_val(tuple, col, acc) do
     v = :erlang.element(col + 1, tuple)
     max_val(tuple, col + 1, if(v > acc, do: v, else: acc))
+  end
+
+  defp row_transitions(board) do
+    Enum.reduce(board, 0, fn row, acc ->
+      acc + row_transitions_count(row)
+    end)
+  end
+
+  defp row_transitions_count(row) do
+    # Board edges count as filled
+    cells = [true | Enum.map(row, &(&1 != nil))] ++ [true]
+    count_transitions(cells, 0)
+  end
+
+  defp count_transitions([_], acc), do: acc
+
+  defp count_transitions([a, b | rest], acc) do
+    inc = if a != b, do: 1, else: 0
+    count_transitions([b | rest], acc + inc)
+  end
+
+  defp column_transitions(board) do
+    Enum.reduce(0..(@width - 1), 0, fn col, acc ->
+      col_cells =
+        Enum.map(board, fn row -> Enum.at(row, col) != nil end)
+
+      # Ceiling = empty (false), floor = filled (true)
+      cells = [false | col_cells] ++ [true]
+      acc + count_transitions(cells, 0)
+    end)
   end
 end

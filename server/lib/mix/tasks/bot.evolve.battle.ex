@@ -254,7 +254,7 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
     msg =
       :io_lib.format(
         "Gen ~3B ~s | Best: ~6.2f | Avg: ~6.2f | " <>
-          "h=~.2f o=~.2f b=~.2f l=~.2f gi=~.2f gs=~.2f tb=~.2f sv=~.2f",
+          "h=~.2f o=~.2f b=~.2f l=~.2f gp=~.2f ab=~.2f tb=~.2f sh=~.2f",
         [
           stats.generation,
           mode_tag,
@@ -264,10 +264,10 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
           w.holes,
           w.bumpiness,
           w.lines,
-          w.garbage_incoming,
-          w.garbage_send,
+          w.garbage_pressure,
+          w.attack_bonus,
           w.tetris_bonus,
-          w.survival
+          w.survival_height
         ]
       )
 
@@ -278,8 +278,9 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
     header =
       "generation,opponent_mode,best_fitness,avg_fitness,worst_fitness," <>
         "height,holes,bumpiness,lines,max_height,wells," <>
-        "garbage_incoming,garbage_send,tetris_bonus," <>
-        "opponent_danger,survival,line_efficiency\n"
+        "row_transitions,column_transitions," <>
+        "garbage_pressure,attack_bonus,danger_aggression," <>
+        "survival_height,tetris_bonus,line_efficiency\n"
 
     File.write!(path, header)
   end
@@ -292,6 +293,7 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
       :io_lib.format(
         "~B,~s,~.4f,~.4f,~.4f," <>
           "~.4f,~.4f,~.4f,~.4f,~.4f,~.4f," <>
+          "~.4f,~.4f," <>
           "~.4f,~.4f,~.4f,~.4f,~.4f,~.4f~n",
         [
           stats.generation,
@@ -305,11 +307,13 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
           w.lines,
           w.max_height,
           w.wells,
-          w.garbage_incoming,
-          w.garbage_send,
+          w.row_transitions,
+          w.column_transitions,
+          w.garbage_pressure,
+          w.attack_bonus,
+          w.danger_aggression,
+          w.survival_height,
           w.tetris_bonus,
-          w.opponent_danger,
-          w.survival,
           w.line_efficiency
         ]
       )
@@ -326,11 +330,13 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
         lines: Float.round(genome.lines, 4),
         max_height: Float.round(genome.max_height, 4),
         wells: Float.round(genome.wells, 4),
-        garbage_incoming: Float.round(genome.garbage_incoming, 4),
-        garbage_send: Float.round(genome.garbage_send, 4),
+        row_transitions: Float.round(genome.row_transitions, 4),
+        column_transitions: Float.round(genome.column_transitions, 4),
+        garbage_pressure: Float.round(genome.garbage_pressure, 4),
+        attack_bonus: Float.round(genome.attack_bonus, 4),
+        danger_aggression: Float.round(genome.danger_aggression, 4),
+        survival_height: Float.round(genome.survival_height, 4),
         tetris_bonus: Float.round(genome.tetris_bonus, 4),
-        opponent_danger: Float.round(genome.opponent_danger, 4),
-        survival: Float.round(genome.survival, 4),
         line_efficiency: Float.round(genome.line_efficiency, 4)
       },
       fitness: Float.round(fitness, 4),
@@ -406,18 +412,20 @@ defmodule Mix.Tasks.Bot.Evolve.Battle do
     ==========================================
     Best fitness: #{Float.round(fitness, 4)}
     Weights:
-      height:          #{Float.round(genome.height, 4)}
-      holes:           #{Float.round(genome.holes, 4)}
-      bumpiness:       #{Float.round(genome.bumpiness, 4)}
-      lines:           #{Float.round(genome.lines, 4)}
-      max_height:      #{Float.round(genome.max_height, 4)}
-      wells:           #{Float.round(genome.wells, 4)}
-      garbage_incoming:#{Float.round(genome.garbage_incoming, 4)}
-      garbage_send:    #{Float.round(genome.garbage_send, 4)}
-      tetris_bonus:    #{Float.round(genome.tetris_bonus, 4)}
-      opponent_danger: #{Float.round(genome.opponent_danger, 4)}
-      survival:        #{Float.round(genome.survival, 4)}
-      line_efficiency: #{Float.round(genome.line_efficiency, 4)}
+      height:             #{Float.round(genome.height, 4)}
+      holes:              #{Float.round(genome.holes, 4)}
+      bumpiness:          #{Float.round(genome.bumpiness, 4)}
+      lines:              #{Float.round(genome.lines, 4)}
+      max_height:         #{Float.round(genome.max_height, 4)}
+      wells:              #{Float.round(genome.wells, 4)}
+      row_transitions:    #{Float.round(genome.row_transitions, 4)}
+      column_transitions: #{Float.round(genome.column_transitions, 4)}
+      garbage_pressure:   #{Float.round(genome.garbage_pressure, 4)}
+      attack_bonus:       #{Float.round(genome.attack_bonus, 4)}
+      danger_aggression:  #{Float.round(genome.danger_aggression, 4)}
+      survival_height:    #{Float.round(genome.survival_height, 4)}
+      tetris_bonus:       #{Float.round(genome.tetris_bonus, 4)}
+      line_efficiency:    #{Float.round(genome.line_efficiency, 4)}
 
     Saved to: #{output_path}
     CSV log:  #{log_path}

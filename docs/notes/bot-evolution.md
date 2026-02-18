@@ -4,9 +4,14 @@ Genetic algorithm pipeline for evolving optimal Tetris bot heuristic weights.
 
 ## Overview
 
-The bot evaluates placements using six weighted heuristics: aggregate height, holes, bumpiness, lines cleared, max column height, and well sum. The GA evolves these weights by simulating thousands of headless games with pruned 2-piece lookahead, selecting for average lines cleared. Supports distributed evaluation across multiple BEAM nodes via Erlang distribution.
+Two evolution modes:
 
-Board analysis is pure Elixir arithmetic, no external ML libraries. A single top-to-bottom pass over the 20x10 grid computes all six metrics.
+- **Solo** — 8 weighted heuristics (aggregate height, holes, bumpiness, lines cleared, max column height, well sum, row transitions, column transitions). Evolves weights by simulating headless games with pruned 2-piece lookahead, selecting for average lines cleared.
+- **Battle** — 14 weighted heuristics (the 8 solo features + 6 multiplayer interaction terms: garbage pressure, attack bonus, danger aggression, survival height, tetris bonus, line efficiency). All interaction terms use post-placement metrics so every weight can influence placement selection. Battle weights are unconstrained (not normalized to sum to 1.0).
+
+Supports distributed evaluation across multiple BEAM nodes via Erlang distribution.
+
+Board analysis is pure Elixir arithmetic, no external ML libraries. A single top-to-bottom pass over the 20x10 grid computes all eight metrics.
 
 ## Architecture
 
@@ -14,15 +19,20 @@ All training code lives under `BotTrainer` — separate from runtime game code.
 
 | Module | Purpose |
 |--------|---------|
-| `BotTrainer.Simulation` | Headless game loop (no GenServer, no timing) |
-| `BotTrainer.Evolution` | GA engine: selection, crossover, mutation |
+| `BotTrainer.Simulation` | Headless solo game loop (no GenServer, no timing) |
+| `BotTrainer.BattleSimulation` | Headless 4-player battle simulation |
+| `BotTrainer.Evolution` | GA engine: selection, crossover, mutation (solo + battle) |
 | `BotTrainer.Cluster` | Distributed worker node management |
-| `Mix.Tasks.Bot.Evolve` | CLI interface with progress output |
-| `Tetris.BoardAnalysis` | Pure Elixir board metric computation |
+| `Mix.Tasks.Bot.Evolve` | Solo evolution CLI (8 weights) |
+| `Mix.Tasks.Bot.Evolve.Battle` | Battle evolution CLI (14 weights) |
+| `Tetris.BoardAnalysis` | Pure Elixir board metric computation (8 metrics) |
+| `Tetris.BotStrategy` | Placement scoring (solo + battle) |
 
 The simulation reuses `Board` and `BotStrategy.enumerate_placements/2` directly, skipping `GameLogic` overhead (no gravity counter, no input queue, no garbage).
 
 ## Running
+
+### Solo evolution
 
 ```bash
 cd server
@@ -36,6 +46,23 @@ mix bot.evolve --population 10 --generations 5 --games 3
 # Custom params
 mix bot.evolve --population 80 --generations 200 --games 20 --concurrency 8
 ```
+
+### Battle evolution
+
+```bash
+cd server
+
+# Quick test
+mix bot.evolve.battle --population 6 --generations 3 --battles 5
+
+# Full run
+mix bot.evolve.battle --population 30 --generations 15 --battles 20
+
+# Custom params
+mix bot.evolve.battle --population 50 --generations 100 --battles 30 --concurrency 8
+```
+
+Battle evolution starts with solo-trained opponents, switches to co-evolution on stagnation, and falls back if regression is detected.
 
 ### Distributed mode
 
@@ -93,12 +120,15 @@ export ERL_AFLAGS="-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9200"
 
 ## Output
 
+### Solo
+
 **JSON** (`priv/bot_weights.json`) — loaded at runtime by `BotStrategy.weights_for(:hard)`:
 ```json
 {
   "weights": {
     "height": 0.28, "holes": 0.42, "bumpiness": 0.11,
-    "lines": 0.19, "max_height": 0.05, "wells": 0.03
+    "lines": 0.19, "max_height": 0.05, "wells": 0.03,
+    "row_transitions": 0.01, "column_transitions": 0.01
   },
   "fitness": 45.2,
   "config": {"population_size": 50, "generations": 100, "games_per_genome": 10},
@@ -108,9 +138,34 @@ export ERL_AFLAGS="-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9200"
 
 **CSV** (`priv/bot_evolution_log.csv`) — one row per generation for external charting.
 
+### Battle
+
+**JSON** (`priv/battle_weights.json`) — loaded at runtime by `BotStrategy.weights_for(:battle)`:
+```json
+{
+  "weights": {
+    "height": 0.40, "holes": 0.35, "bumpiness": 0.15, "lines": 0.30,
+    "max_height": 0.10, "wells": 0.05,
+    "row_transitions": 0.10, "column_transitions": 0.10,
+    "garbage_pressure": 0.20, "attack_bonus": 0.15,
+    "danger_aggression": 0.10, "survival_height": 0.15,
+    "tetris_bonus": 0.10, "line_efficiency": 0.05
+  },
+  "fitness": 84.07,
+  "config": {"population_size": 30, "generations": 15, "battles_per_genome": 20},
+  "evolved_at": "2026-02-17T..."
+}
+```
+
+Battle weights are not normalized to sum to 1.0 — each weight is clamped to [0.0, 2.0] independently.
+
+**CSV** (`priv/battle_evolution_log.csv`) — one row per generation.
+
 ## How it works
 
-1. Generate random population of 6-weight vectors (normalized to sum=1.0)
+### Solo
+
+1. Generate random population of 8-weight vectors (normalized to sum=1.0)
 2. Each generation: evaluate all genomes in parallel across cluster (N games each, pruned 2-piece lookahead)
 3. Sort by fitness (average lines cleared)
 4. Elitism: carry top genomes unchanged
@@ -120,7 +175,18 @@ export ERL_AFLAGS="-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9200"
 
 Only `:hard` difficulty uses evolved weights. `:easy` and `:medium` keep hardcoded defaults for intentional difficulty scaling.
 
+### Battle
+
+1. Generate random population of 14-weight vectors (unconstrained, each in [0.0, 1.0])
+2. Each generation: evaluate all genomes in 4-player battle simulations against opponents
+3. Sort by fitness (battle performance: placement, survival, lines cleared, garbage sent)
+4. Elitism + tournament selection + crossover + Gaussian mutation (clamped to [0.0, 2.0])
+5. No normalization — weights are independent, allowing the GA to find the right scale for each feature
+6. Adaptive opponents: starts with solo-trained bots, switches to co-evolution on stagnation
+
 ## Heuristic features
+
+### Solo features (8 weights)
 
 | Feature | Weight key | Score effect | Description |
 |---------|-----------|-------------|-------------|
@@ -130,6 +196,21 @@ Only `:hard` difficulty uses evolved weights. `:easy` and `:medium` keep hardcod
 | Lines cleared | `lines` | rewarded (+) | Complete lines from placement |
 | Max height | `max_height` | penalized (-) | Height of tallest column |
 | Well sum | `wells` | penalized (-) | Sum of well depths — columns lower than both neighbors |
+| Row transitions | `row_transitions` | penalized (-) | Adjacent cell pairs with different fill state per row (edges = filled) |
+| Column transitions | `column_transitions` | penalized (-) | Adjacent cell pairs with different fill state per column (floor = filled, ceiling = empty) |
+
+### Battle interaction terms (6 additional weights)
+
+All terms use post-placement metrics so they vary per candidate placement.
+
+| Feature | Weight key | Formula | Description |
+|---------|-----------|---------|-------------|
+| Garbage pressure | `garbage_pressure` | `-w * pending_garbage * post_max_h` | Penalizes high boards when garbage is incoming |
+| Attack bonus | `attack_bonus` | `+w * sends_garbage * (1 + avg_opp_h)` | Rewards sending garbage, more when opponents are tall |
+| Danger aggression | `danger_aggression` | `+w * lines * avg_opp_h` | Rewards line clears when opponents are near death |
+| Survival height | `survival_height` | `-w * post_max_h * own_pre_h` | Penalizes high placements as own board fills up |
+| Tetris bonus | `tetris_bonus` | `+w * is_tetris` | Bonus for 4-line clears (maximum garbage send) |
+| Line efficiency | `line_efficiency` | `+w * lines^2` | Rewards multi-line clears quadratically |
 
 ## Pruned lookahead
 

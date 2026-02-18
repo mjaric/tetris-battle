@@ -13,18 +13,20 @@ defmodule BotTrainer.BattleSimulationTest do
   }
 
   @battle_weights %{
-    height: 0.15,
-    holes: 0.15,
-    bumpiness: 0.08,
-    lines: 0.10,
-    max_height: 0.05,
+    height: 0.40,
+    holes: 0.35,
+    bumpiness: 0.15,
+    lines: 0.30,
+    max_height: 0.10,
     wells: 0.05,
-    garbage_incoming: 0.10,
-    garbage_send: 0.08,
-    tetris_bonus: 0.08,
-    opponent_danger: 0.06,
-    survival: 0.06,
-    line_efficiency: 0.04
+    row_transitions: 0.10,
+    column_transitions: 0.10,
+    garbage_pressure: 0.20,
+    attack_bonus: 0.15,
+    danger_aggression: 0.10,
+    survival_height: 0.15,
+    tetris_bonus: 0.10,
+    line_efficiency: 0.05
   }
 
   describe "simulate_battle/3" do

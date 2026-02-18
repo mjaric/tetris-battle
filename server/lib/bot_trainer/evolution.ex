@@ -2,7 +2,7 @@ defmodule BotTrainer.Evolution do
   @moduledoc """
   Genetic algorithm engine for evolving Tetris bot heuristic weights.
 
-  Supports solo mode (6-weight genomes) and battle mode (12-weight
+  Supports solo mode (8-weight genomes) and battle mode (14-weight
   genomes with adaptive opponent strategy).
 
   Pure functional — accepts a callback for progress reporting.
@@ -17,7 +17,9 @@ defmodule BotTrainer.Evolution do
     :bumpiness,
     :lines,
     :max_height,
-    :wells
+    :wells,
+    :row_transitions,
+    :column_transitions
   ]
 
   @battle_weight_keys [
@@ -27,11 +29,13 @@ defmodule BotTrainer.Evolution do
     :lines,
     :max_height,
     :wells,
-    :garbage_incoming,
-    :garbage_send,
+    :row_transitions,
+    :column_transitions,
+    :garbage_pressure,
+    :attack_bonus,
+    :danger_aggression,
+    :survival_height,
     :tetris_bonus,
-    :opponent_danger,
-    :survival,
     :line_efficiency
   ]
 
@@ -471,9 +475,7 @@ defmodule BotTrainer.Evolution do
         tournament_select(scored, config.tournament_size)
       end
 
-    child
-    |> mutate_keys(config.mutation_rate, config.mutation_sigma, @battle_weight_keys)
-    |> normalize_keys(@battle_weight_keys)
+    mutate_keys(child, config.mutation_rate, config.mutation_sigma, @battle_weight_keys)
   end
 
   # -----------------------------------------------------------
@@ -594,8 +596,17 @@ defmodule BotTrainer.Evolution do
 
   defp mutate_keys(genome, rate, sigma, keys) do
     Map.new(keys, fn key ->
-      {key, maybe_mutate(genome[key], rate, sigma)}
+      {key, maybe_mutate_wide(genome[key], rate, sigma)}
     end)
+  end
+
+  defp maybe_mutate_wide(value, rate, sigma) do
+    if :rand.uniform() < rate do
+      noise = :rand.normal() * sigma
+      clamp(value + noise, 0.0, 2.0)
+    else
+      value
+    end
   end
 
   # -----------------------------------------------------------
@@ -632,12 +643,7 @@ defmodule BotTrainer.Evolution do
   end
 
   defp random_battle_genome do
-    genome =
-      Map.new(@battle_weight_keys, fn k ->
-        {k, :rand.uniform()}
-      end)
-
-    normalize_keys(genome, @battle_weight_keys)
+    Map.new(@battle_weight_keys, fn k -> {k, :rand.uniform()} end)
   end
 
   defp pick(a, b) do

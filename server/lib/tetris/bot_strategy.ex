@@ -21,11 +21,13 @@ defmodule Tetris.BotStrategy do
     :lines,
     :max_height,
     :wells,
-    :garbage_incoming,
-    :garbage_send,
+    :row_transitions,
+    :column_transitions,
+    :garbage_pressure,
+    :attack_bonus,
+    :danger_aggression,
+    :survival_height,
     :tetris_bonus,
-    :opponent_danger,
-    :survival,
     :line_efficiency
   ]
 
@@ -185,7 +187,11 @@ defmodule Tetris.BotStrategy do
       weights.bumpiness * metrics.bumpiness +
       weights.lines * metrics.complete_lines -
       Map.get(weights, :max_height, 0.0) * Map.get(metrics, :max_height, 0) -
-      Map.get(weights, :wells, 0.0) * Map.get(metrics, :well_sum, 0)
+      Map.get(weights, :wells, 0.0) * Map.get(metrics, :well_sum, 0) -
+      Map.get(weights, :row_transitions, 0.0) *
+        Map.get(metrics, :row_transitions, 0) -
+      Map.get(weights, :column_transitions, 0.0) *
+        Map.get(metrics, :column_transitions, 0)
   end
 
   @doc """
@@ -196,32 +202,44 @@ defmodule Tetris.BotStrategy do
   """
   @spec score_battle_placement(map(), map(), map()) :: float()
   def score_battle_placement(metrics, weights, battle_ctx) do
-    base = score_placement(metrics, weights)
+    score_battle_base(metrics, weights) +
+      score_battle_terms(metrics, weights, battle_ctx)
+  end
 
-    own_height_ratio =
-      battle_ctx.own_max_height / @board_height
+  defp score_battle_base(metrics, weights) do
+    -weights.height * metrics.aggregate_height -
+      weights.holes * metrics.holes -
+      weights.bumpiness * metrics.bumpiness +
+      weights.lines * metrics.complete_lines -
+      weights.max_height * metrics.max_height -
+      weights.wells * metrics.well_sum -
+      weights.row_transitions * Map.get(metrics, :row_transitions, 0) -
+      weights.column_transitions *
+        Map.get(metrics, :column_transitions, 0)
+  end
 
-    avg_opp_height_ratio =
-      case battle_ctx.opponent_max_heights do
-        [] ->
-          0.0
-
-        heights ->
-          Enum.sum(heights) / (length(heights) * @board_height)
-      end
-
+  defp score_battle_terms(metrics, weights, ctx) do
     lines = metrics.complete_lines
-    sends_garbage = if lines >= 2, do: 1.0, else: 0.0
+    post_max_h = metrics.max_height / @board_height
+    avg_opp_h = avg_opponent_height_ratio(ctx.opponent_max_heights)
+    sends_garbage = if lines >= 2, do: lines - 1, else: 0
     is_tetris = if lines == 4, do: 1.0, else: 0.0
+    own_pre_h = ctx.own_max_height / @board_height
 
-    garbage_in = weights.garbage_incoming * battle_ctx.pending_garbage_count * own_height_ratio
-    garbage_out = weights.garbage_send * lines * sends_garbage
-    tetris = weights.tetris_bonus * is_tetris
-    opp_danger = weights.opponent_danger * avg_opp_height_ratio
-    surv = weights.survival * own_height_ratio * own_height_ratio
-    line_eff = weights.line_efficiency * lines * lines
+    gp = -weights.garbage_pressure * ctx.pending_garbage_count * post_max_h
+    ab = weights.attack_bonus * sends_garbage * (1.0 + avg_opp_h)
+    da = weights.danger_aggression * lines * avg_opp_h
+    sh = -weights.survival_height * post_max_h * own_pre_h
+    tb = weights.tetris_bonus * is_tetris
+    le = weights.line_efficiency * lines * lines
 
-    base - garbage_in + garbage_out + tetris + opp_danger - surv + line_eff
+    gp + ab + da + sh + tb + le
+  end
+
+  defp avg_opponent_height_ratio([]), do: 0.0
+
+  defp avg_opponent_height_ratio(heights) do
+    Enum.sum(heights) / (length(heights) * @board_height)
   end
 
   @doc """
@@ -361,18 +379,20 @@ defmodule Tetris.BotStrategy do
 
   defp default_battle_weights do
     %{
-      height: 0.15,
-      holes: 0.15,
-      bumpiness: 0.08,
-      lines: 0.10,
-      max_height: 0.05,
+      height: 0.40,
+      holes: 0.35,
+      bumpiness: 0.15,
+      lines: 0.30,
+      max_height: 0.10,
       wells: 0.05,
-      garbage_incoming: 0.10,
-      garbage_send: 0.08,
-      tetris_bonus: 0.08,
-      opponent_danger: 0.06,
-      survival: 0.06,
-      line_efficiency: 0.04
+      row_transitions: 0.10,
+      column_transitions: 0.10,
+      garbage_pressure: 0.20,
+      attack_bonus: 0.15,
+      danger_aggression: 0.10,
+      survival_height: 0.15,
+      tetris_bonus: 0.10,
+      line_efficiency: 0.05
     }
   end
 
