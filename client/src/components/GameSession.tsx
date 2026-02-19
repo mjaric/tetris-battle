@@ -4,6 +4,8 @@ import { useGameContext } from '../context/GameContext.tsx';
 import { useChannel } from '../hooks/useChannel.ts';
 import { useMultiplayerGame } from '../hooks/useMultiplayerGame.ts';
 import { useLatency } from '../hooks/useLatency.ts';
+import { soundManager } from '../audio/SoundManager.ts';
+import AudioControls from './AudioControls.tsx';
 import WaitingRoom from './WaitingRoom.tsx';
 import MultiBoard from './MultiBoard.tsx';
 import Results from './Results.tsx';
@@ -22,6 +24,12 @@ export default function GameSession() {
     }
   }, [socket, channel, roomId, join]);
 
+  useEffect(() => {
+    if (game.status === 'playing') {
+      soundManager.init();
+    }
+  }, [game.status]);
+
   function handleLeave() {
     leave();
     navigate('/lobby');
@@ -32,7 +40,12 @@ export default function GameSession() {
   }
 
   if (game.status === 'playing' && game.gameState && playerId) {
-    return <MultiBoard gameState={game.gameState} myPlayerId={playerId} latency={latency} />;
+    return (
+      <>
+        <MultiBoard gameState={game.gameState} myPlayerId={playerId} latency={latency} />
+        <AudioControls />
+      </>
+    );
   }
 
   return (

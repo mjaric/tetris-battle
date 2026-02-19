@@ -1,4 +1,7 @@
 import { BOARD_WIDTH, BOARD_HEIGHT, CELL_SIZE } from '../constants.ts';
+import type { GameEvent } from '../types.ts';
+import type { DangerLevel } from '../utils/dangerZone.ts';
+import { useAnimations } from '../hooks/useAnimations.ts';
 
 interface CellProps {
   color: string | null;
@@ -77,22 +80,67 @@ function GarbageMeter({ count, cellSize, totalRows }: GarbageMeterProps) {
 interface BoardProps {
   board: (string | null)[][];
   pendingGarbage?: number;
+  events?: GameEvent[];
+  dangerLevel?: DangerLevel;
 }
 
-export default function Board({ board, pendingGarbage = 0 }: BoardProps) {
+export default function Board({ board, pendingGarbage = 0, events = [], dangerLevel = 'none' }: BoardProps) {
+  const { boardClassName, overlays, dangerClassName, garbageMeterPulse } = useAnimations(events, dangerLevel, true);
+
   return (
-    <div className="flex items-end">
-      <GarbageMeter count={pendingGarbage} cellSize={CELL_SIZE} totalRows={BOARD_HEIGHT} />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${String(BOARD_WIDTH)}, ${String(CELL_SIZE)}px)`,
-          gridTemplateRows: `repeat(${String(BOARD_HEIGHT)}, ${String(CELL_SIZE)}px)`,
-        }}
-        className="rounded border-3 border-accent bg-bg-cell shadow-[0_0_20px_rgba(108,99,255,0.3)]"
-      >
-        {board.map((row, y) => row.map((cell, x) => <Cell key={`${String(y)}-${String(x)}`} color={cell} />))}
+    <div style={{ position: 'relative' }}>
+      <div className="flex items-end">
+        <div className={garbageMeterPulse ? 'anim-garbage-meter-pulse' : ''}>
+          <GarbageMeter count={pendingGarbage} cellSize={CELL_SIZE} totalRows={BOARD_HEIGHT} />
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${String(BOARD_WIDTH)}, ${String(CELL_SIZE)}px)`,
+            gridTemplateRows: `repeat(${String(BOARD_HEIGHT)}, ${String(CELL_SIZE)}px)`,
+          }}
+          className={`rounded border-3 border-accent bg-bg-cell shadow-[0_0_20px_rgba(108,99,255,0.3)] ${boardClassName}`}
+        >
+          {board.map((row, y) => row.map((cell, x) => <Cell key={`${String(y)}-${String(x)}`} color={cell} />))}
+        </div>
       </div>
+
+      {/* Danger zone overlay */}
+      {dangerClassName && (
+        <div
+          className={dangerClassName}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 4,
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      )}
+
+      {/* Floating text overlays */}
+      {overlays.map((overlay) => (
+        <div
+          key={overlay.id}
+          className={overlay.className}
+          style={{
+            position: 'absolute',
+            top: '40%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: overlay.color,
+            fontWeight: 'bold',
+            fontSize: 24,
+            textShadow: `0 0 10px ${overlay.color}`,
+            pointerEvents: 'none',
+            zIndex: 2,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {overlay.text}
+        </div>
+      ))}
     </div>
   );
 }

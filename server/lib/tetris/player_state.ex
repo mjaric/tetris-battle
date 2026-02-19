@@ -27,7 +27,10 @@ defmodule Tetris.PlayerState do
     :gravity_counter,
     :gravity_threshold,
     :input_queue,
-    :pieces_placed
+    :pieces_placed,
+    :combo_count,
+    :b2b_tetris,
+    :events
   ]
 
   @type t :: %__MODULE__{
@@ -46,7 +49,10 @@ defmodule Tetris.PlayerState do
           gravity_counter: non_neg_integer(),
           gravity_threshold: pos_integer(),
           input_queue: :queue.queue(),
-          pieces_placed: non_neg_integer()
+          pieces_placed: non_neg_integer(),
+          combo_count: non_neg_integer(),
+          b2b_tetris: boolean(),
+          events: list(map())
         }
 
   @doc """
@@ -78,7 +84,10 @@ defmodule Tetris.PlayerState do
       gravity_counter: 0,
       gravity_threshold: 16,
       input_queue: :queue.new(),
-      pieces_placed: 0
+      pieces_placed: 0,
+      combo_count: 0,
+      b2b_tetris: false,
+      events: []
     }
   end
 
@@ -102,7 +111,8 @@ defmodule Tetris.PlayerState do
       alive: state.alive,
       next_piece: next_piece_type(state.next_piece),
       target: state.target,
-      pending_garbage: length(state.pending_garbage)
+      pending_garbage: length(state.pending_garbage),
+      events: state.events
     }
   end
 
@@ -128,7 +138,9 @@ defmodule Tetris.PlayerState do
       pending_garbage: state.pending_garbage,
       gravity_counter: state.gravity_counter,
       gravity_threshold: state.gravity_threshold,
-      pieces_placed: state.pieces_placed
+      pieces_placed: state.pieces_placed,
+      combo_count: state.combo_count,
+      b2b_tetris: state.b2b_tetris
     }
   end
 
@@ -156,7 +168,10 @@ defmodule Tetris.PlayerState do
       gravity_counter: game_logic_map.gravity_counter,
       gravity_threshold: game_logic_map.gravity_threshold,
       input_queue: original.input_queue,
-      pieces_placed: game_logic_map.pieces_placed
+      pieces_placed: game_logic_map.pieces_placed,
+      combo_count: Map.get(game_logic_map, :combo_count, 0),
+      b2b_tetris: Map.get(game_logic_map, :b2b_tetris, false),
+      events: original.events
     }
   end
 

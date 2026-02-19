@@ -103,7 +103,7 @@ defmodule Tetris.GameLogic do
     state = %{state | position: {px, gy}, score: state.score + drop_score}
 
     {:ok, :locked, locked_state} = lock_and_spawn(state)
-    {:ok, locked_state}
+    {:ok, Map.put(locked_state, :hard_drop_distance, distance)}
   end
 
   @doc """
@@ -193,28 +193,49 @@ defmodule Tetris.GameLogic do
     line_score = Map.get(@line_points, lines_cleared, 0) * state.level
     new_score = state.score + line_score
 
-    # 3. Update lines count, calculate new level
+    # 3. Combo tracking
+    old_combo = Map.get(state, :combo_count, 0)
+    new_combo = if lines_cleared > 0, do: old_combo + 1, else: 0
+
+    # 4. B2B Tetris tracking
+    old_b2b = Map.get(state, :b2b_tetris, false)
+    is_tetris = lines_cleared == 4
+    is_b2b_tetris_this_lock = old_b2b and is_tetris
+    new_b2b = is_tetris
+
+    # 5. Update lines count, calculate new level
     new_lines = state.lines + lines_cleared
     new_level = div(new_lines, 10) + 1
     new_threshold = gravity_threshold(new_level)
 
-    state = %{
-      state
-      | board: cleared_board,
-        score: new_score,
-        lines: new_lines,
-        level: new_level,
-        gravity_threshold: new_threshold,
-        pieces_placed: Map.get(state, :pieces_placed, 0) + 1
-    }
+    state =
+      %{
+        state
+        | board: cleared_board,
+          score: new_score,
+          lines: new_lines,
+          level: new_level,
+          gravity_threshold: new_threshold,
+          pieces_placed: Map.get(state, :pieces_placed, 0) + 1
+      }
+      |> Map.put(:combo_count, new_combo)
+      |> Map.put(:b2b_tetris, new_b2b)
 
-    # 4. Spawn next piece (garbage is applied in the tick loop)
+    # 6. Spawn next piece (garbage is applied in the tick loop)
     case spawn_piece(state) do
       {:ok, spawned_state} ->
-        {:ok, :locked, Map.put(spawned_state, :lines_cleared_this_lock, lines_cleared)}
+        {:ok, :locked,
+         spawned_state
+         |> Map.put(:lines_cleared_this_lock, lines_cleared)
+         |> Map.put(:combo_count_this_lock, new_combo)
+         |> Map.put(:is_b2b_tetris_this_lock, is_b2b_tetris_this_lock)}
 
       {:game_over, dead_state} ->
-        {:ok, :locked, Map.put(dead_state, :lines_cleared_this_lock, lines_cleared)}
+        {:ok, :locked,
+         dead_state
+         |> Map.put(:lines_cleared_this_lock, lines_cleared)
+         |> Map.put(:combo_count_this_lock, new_combo)
+         |> Map.put(:is_b2b_tetris_this_lock, is_b2b_tetris_this_lock)}
     end
   end
 end

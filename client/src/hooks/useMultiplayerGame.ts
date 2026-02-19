@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Channel } from 'phoenix';
 import type { GameState, PlayerBroadcast } from '../types.ts';
+import { soundManager } from '../audio/SoundManager.ts';
 
 type GameStatus = GameState['status'];
 
@@ -84,18 +85,22 @@ export function useMultiplayerGame(channel: Channel | null, myPlayerId: string |
         case 'ArrowLeft':
           e.preventDefault();
           sendInput('move_left');
+          soundManager.playMove();
           break;
         case 'ArrowRight':
           e.preventDefault();
           sendInput('move_right');
+          soundManager.playMove();
           break;
         case 'ArrowDown':
           e.preventDefault();
           sendInput('move_down');
+          soundManager.playSoftDrop();
           break;
         case 'ArrowUp':
           e.preventDefault();
           sendInput('rotate');
+          soundManager.playRotate();
           break;
         case ' ':
           e.preventDefault();
