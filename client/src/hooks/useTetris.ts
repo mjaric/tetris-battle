@@ -128,6 +128,7 @@ export function useTetris(): UseTetrisResult {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const comboRef = useRef(0);
   const lastWasTetrisRef = useRef(false);
+  const eventClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   boardRef.current = board;
   currentPieceRef.current = currentPiece;
@@ -198,9 +199,12 @@ export function useTetris(): UseTetrisResult {
     }
 
     if (newEvents.length > 0) {
+      if (eventClearRef.current) clearTimeout(eventClearRef.current);
       setEvents(newEvents);
-      // Clear events after a short delay so they're consumed once
-      setTimeout(() => setEvents([]), 50);
+      eventClearRef.current = setTimeout(() => {
+        setEvents([]);
+        eventClearRef.current = null;
+      }, 50);
     }
 
     const next = nextPiece ?? randomTetromino();
@@ -287,7 +291,8 @@ export function useTetris(): UseTetrisResult {
 
     // Emit hard_drop event
     if (dropDistance > 0) {
-      setEvents((prev) => [...prev, { type: 'hard_drop', distance: dropDistance }]);
+      if (eventClearRef.current) clearTimeout(eventClearRef.current);
+      setEvents([{ type: 'hard_drop', distance: dropDistance }]);
     }
 
     setTimeout(() => lockPiece(), 0);
@@ -310,6 +315,8 @@ export function useTetris(): UseTetrisResult {
     setGameStarted(true);
     comboRef.current = 0;
     lastWasTetrisRef.current = false;
+    if (eventClearRef.current) clearTimeout(eventClearRef.current);
+    eventClearRef.current = null;
     setEvents([]);
 
     const first = randomTetromino();

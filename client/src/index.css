@@ -77,29 +77,60 @@ body {
 }
 
 @keyframes board-shake-sm {
-  0%, 100% { transform: translateY(0); }
-  25% { transform: translateY(-2px); }
-  75% { transform: translateY(2px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-2px);
+  }
+  75% {
+    transform: translateY(2px);
+  }
 }
 
 @keyframes board-shake-md {
-  0%, 100% { transform: translateY(0); }
-  25% { transform: translateY(-4px); }
-  75% { transform: translateY(4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-4px);
+  }
+  75% {
+    transform: translateY(4px);
+  }
 }
 
 @keyframes board-shake-lg {
-  0%, 100% { transform: translateY(0); }
-  20% { transform: translateY(-6px); }
-  40% { transform: translateY(4px); }
-  60% { transform: translateY(-4px); }
-  80% { transform: translateY(6px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateY(-6px);
+  }
+  40% {
+    transform: translateY(4px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+  80% {
+    transform: translateY(6px);
+  }
 }
 
 @keyframes garbage-slam {
-  0% { transform: translateY(8px); }
-  30% { transform: translateY(-3px); }
-  100% { transform: translateY(0); }
+  0% {
+    transform: translateY(8px);
+  }
+  30% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 @keyframes float-up {
@@ -118,16 +149,22 @@ body {
 }
 
 @keyframes b2b-aura {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(255, 215, 0, 0.3),
+      inset 0 0 10px rgba(255, 215, 0, 0.1);
   }
   50% {
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.6), inset 0 0 20px rgba(255, 215, 0, 0.2);
+    box-shadow:
+      0 0 25px rgba(255, 215, 0, 0.6),
+      inset 0 0 20px rgba(255, 215, 0, 0.2);
   }
 }
 
 @keyframes danger-pulse {
-  0%, 100% {
+  0%,
+  100% {
     background-color: rgba(255, 71, 87, 0);
   }
   50% {
@@ -136,7 +173,8 @@ body {
 }
 
 @keyframes danger-pulse-fast {
-  0%, 100% {
+  0%,
+  100% {
     background-color: rgba(255, 71, 87, 0);
   }
   50% {
@@ -178,7 +216,8 @@ body {
 }
 
 @keyframes garbage-meter-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
     box-shadow: 0 0 5px rgba(255, 71, 87, 0.3);
   }
@@ -189,20 +228,48 @@ body {
 }
 
 /* Animation utility classes */
-.anim-line-clear { animation: line-clear-flash 300ms ease-out forwards; }
-.anim-tetris { animation: tetris-flash 500ms ease-out forwards; }
-.anim-shake-sm { animation: board-shake-sm 150ms ease-in-out; }
-.anim-shake-md { animation: board-shake-md 150ms ease-in-out; }
-.anim-shake-lg { animation: board-shake-lg 150ms ease-in-out; }
-.anim-garbage-slam { animation: garbage-slam 250ms ease-out; }
-.anim-float-up { animation: float-up 800ms ease-out forwards; }
-.anim-b2b-aura { animation: b2b-aura 2000ms ease-in-out; }
-.anim-danger-pulse { animation: danger-pulse 1500ms ease-in-out infinite; }
-.anim-danger-pulse-fast { animation: danger-pulse-fast 500ms ease-in-out infinite; }
-.anim-elim-flash { animation: elim-flash 300ms ease-out forwards; }
-.anim-elim-scatter { animation: elim-scatter 800ms ease-out forwards; }
-.anim-garbage-sent { animation: garbage-sent-flash 400ms ease-out forwards; }
-.anim-garbage-meter-pulse { animation: garbage-meter-pulse 600ms ease-in-out; }
+.anim-line-clear {
+  animation: line-clear-flash 300ms ease-out forwards;
+}
+.anim-tetris {
+  animation: tetris-flash 500ms ease-out forwards;
+}
+.anim-shake-sm {
+  animation: board-shake-sm 150ms ease-in-out;
+}
+.anim-shake-md {
+  animation: board-shake-md 150ms ease-in-out;
+}
+.anim-shake-lg {
+  animation: board-shake-lg 150ms ease-in-out;
+}
+.anim-garbage-slam {
+  animation: garbage-slam 250ms ease-out;
+}
+.anim-float-up {
+  animation: float-up 800ms ease-out forwards;
+}
+.anim-b2b-aura {
+  animation: b2b-aura 2000ms ease-in-out;
+}
+.anim-danger-pulse {
+  animation: danger-pulse 1500ms ease-in-out infinite;
+}
+.anim-danger-pulse-fast {
+  animation: danger-pulse-fast 500ms ease-in-out infinite;
+}
+.anim-elim-flash {
+  animation: elim-flash 300ms ease-out forwards;
+}
+.anim-elim-scatter {
+  animation: elim-scatter 800ms ease-out forwards;
+}
+.anim-garbage-sent {
+  animation: garbage-sent-flash 400ms ease-out forwards;
+}
+.anim-garbage-meter-pulse {
+  animation: garbage-meter-pulse 600ms ease-in-out;
+}
 
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {

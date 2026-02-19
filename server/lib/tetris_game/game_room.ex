@@ -490,7 +490,10 @@ defmodule TetrisGame.GameRoom do
         acc =
           case Map.fetch(acc, sender_id) do
             {:ok, sender} ->
-              Map.put(acc, sender_id, %{sender | events: sender.events ++ [%{type: "garbage_sent", target: target_id, count: count}]})
+              Map.put(acc, sender_id, %{
+                sender
+                | events: sender.events ++ [%{type: "garbage_sent", target: target_id, count: count}]
+              })
 
             :error ->
               acc

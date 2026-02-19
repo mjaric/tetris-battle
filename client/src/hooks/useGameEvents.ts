@@ -18,9 +18,7 @@ export function useGameEvents(
     }
     lastTickRef.current = gameState.tick;
 
-    const myEvents: GameEvent[] = myPlayerId
-      ? (gameState.players[myPlayerId]?.events ?? [])
-      : [];
+    const myEvents: GameEvent[] = myPlayerId ? (gameState.players[myPlayerId]?.events ?? []) : [];
 
     const opponentEvents = new Map<string, GameEvent[]>();
     for (const [playerId, playerData] of Object.entries(gameState.players)) {

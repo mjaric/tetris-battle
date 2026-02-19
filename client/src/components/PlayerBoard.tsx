@@ -455,41 +455,41 @@ export default function PlayerBoard({
         </div>
 
         {/* Danger zone overlay */}
-            {dangerClassName && (
-              <div
-                className={dangerClassName}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: 4,
-                  pointerEvents: 'none',
-                  zIndex: 1,
-                }}
-              />
-            )}
+        {dangerClassName && (
+          <div
+            className={dangerClassName}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 4,
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          />
+        )}
 
-            {/* Floating text overlays */}
-            {overlays.map((overlay) => (
-              <div
-                key={overlay.id}
-                className={overlay.className}
-                style={{
-                  position: 'absolute',
-                  top: '40%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  color: overlay.color,
-                  fontWeight: 'bold',
-                  fontSize: Math.max(14, Math.round(cellSize * 0.8)),
-                  textShadow: `0 0 10px ${overlay.color}`,
-                  pointerEvents: 'none',
-                  zIndex: 2,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {overlay.text}
-              </div>
-            ))}
+        {/* Floating text overlays */}
+        {overlays.map((overlay) => (
+          <div
+            key={overlay.id}
+            className={overlay.className}
+            style={{
+              position: 'absolute',
+              top: '40%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: overlay.color,
+              fontWeight: 'bold',
+              fontSize: Math.max(14, Math.round(cellSize * 0.8)),
+              textShadow: `0 0 10px ${overlay.color}`,
+              pointerEvents: 'none',
+              zIndex: 2,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {overlay.text}
+          </div>
+        ))}
 
         {alpha > 0 && (
           <div

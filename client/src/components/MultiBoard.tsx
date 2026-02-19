@@ -39,7 +39,7 @@ export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoar
   const viewportWidth = useViewportWidth();
   const myState = gameState.players[myPlayerId];
   const { myEvents, opponentEvents } = useGameEvents(gameState, myPlayerId);
-  const dangerLevel = myState ? computeDangerLevel(myState.board) : 'none' as const;
+  const dangerLevel = myState ? computeDangerLevel(myState.board) : ('none' as const);
   if (!myState) return null;
 
   const sortedPlayers = Object.entries(gameState.players).sort(([a], [b]) => {

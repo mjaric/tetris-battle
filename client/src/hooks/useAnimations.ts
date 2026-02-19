@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameEvent } from '../types';
 import type { DangerLevel } from '../utils/dangerZone';
 
@@ -18,28 +18,44 @@ interface AnimationState {
 
 const MAX_CONCURRENT = 5;
 
-export function useAnimations(
-  events: GameEvent[],
-  dangerLevel: DangerLevel,
-  isMe: boolean
-): AnimationState {
+export function useAnimations(events: GameEvent[], dangerLevel: DangerLevel, isMe: boolean): AnimationState {
   const [activeAnims, setActiveAnims] = useState<string[]>([]);
   const [overlays, setOverlays] = useState<FloatingText[]>([]);
   const [garbageMeterPulse, setGarbageMeterPulse] = useState(false);
   const overlayIdRef = useRef(0);
+  // Track timeouts in a ref so they survive effect re-runs.
+  // Only clear on unmount — never cancel the animation-clearing timeouts.
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const scheduleTimeout = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      fn();
+      // Remove from tracking
+      timeoutsRef.current = timeoutsRef.current.filter((t) => t !== id);
+    }, ms);
+    timeoutsRef.current.push(id);
+  }, []);
+
+  // Clear all pending timeouts on unmount only
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     if (events.length === 0) return;
 
     const newAnims: string[] = [];
     const newOverlays: FloatingText[] = [];
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
 
     for (const event of events) {
       switch (event.type) {
         case 'hard_drop': {
           if (isMe) {
-            const shake = event.distance > 10 ? 'anim-shake-lg' : event.distance > 5 ? 'anim-shake-md' : 'anim-shake-sm';
+            const shake =
+              event.distance > 10 ? 'anim-shake-lg' : event.distance > 5 ? 'anim-shake-md' : 'anim-shake-sm';
             newAnims.push(shake);
           }
           break;
@@ -103,8 +119,7 @@ export function useAnimations(
           newAnims.push(isMe ? 'anim-garbage-slam' : '');
           if (isMe) {
             setGarbageMeterPulse(true);
-            const t = setTimeout(() => setGarbageMeterPulse(false), 600);
-            timeouts.push(t);
+            scheduleTimeout(() => setGarbageMeterPulse(false), 600);
           }
           break;
         }
@@ -124,24 +139,16 @@ export function useAnimations(
       setOverlays((prev) => [...prev, ...newOverlays].slice(-MAX_CONCURRENT));
     }
 
-    // Clean up animations after their duration
-    const animTimeout = setTimeout(() => {
-      setActiveAnims([]);
-    }, 500);
-    timeouts.push(animTimeout);
+    // Schedule cleanup — these timeouts must NOT be cancelled by effect re-runs
+    scheduleTimeout(() => setActiveAnims([]), 500);
 
-    // Clean up overlays after float-up duration
-    const overlayTimeout = setTimeout(() => {
-      setOverlays((prev) =>
-        prev.filter((o) => !newOverlays.some((n) => n.id === o.id))
-      );
-    }, 800);
-    timeouts.push(overlayTimeout);
-
-    return () => {
-      timeouts.forEach(clearTimeout);
-    };
-  }, [events, isMe]);
+    if (newOverlays.length > 0) {
+      const overlayIds = new Set(newOverlays.map((o) => o.id));
+      scheduleTimeout(() => {
+        setOverlays((prev) => prev.filter((o) => !overlayIds.has(o.id)));
+      }, 800);
+    }
+  }, [events, isMe, scheduleTimeout]);
 
   // Danger zone class
   let dangerClassName = '';

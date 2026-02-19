@@ -20,6 +20,6 @@ export function computeDangerLevel(board: (string | null)[][]): DangerLevel {
 
   if (fillPercent >= 0.85) return 'critical';
   if (fillPercent >= 0.75) return 'medium';
-  if (fillPercent >= 0.60) return 'low';
+  if (fillPercent >= 0.6) return 'low';
   return 'none';
 }
