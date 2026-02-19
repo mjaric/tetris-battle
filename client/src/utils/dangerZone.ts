@@ -7,7 +7,7 @@ export type DangerLevel = 'none' | 'low' | 'medium' | 'critical';
 export function computeDangerLevel(board: (string | null)[][]): DangerLevel {
   if (!board || board.length === 0) return 'none';
 
-  const totalCells = board.length * board[0].length;
+  const totalCells = board.length * (board[0] || []).length;
   let filledCells = 0;
 
   for (const row of board) {
