@@ -10,6 +10,8 @@ import {
   POINTS,
   WALL_KICKS,
 } from '../constants.ts';
+import type { GameEvent } from '../types.ts';
+import { soundManager } from '../audio/SoundManager.ts';
 
 type Cell = string | null;
 type Board = Cell[][];
@@ -37,6 +39,7 @@ interface UseTetrisResult {
   isPaused: boolean;
   startGame: () => void;
   togglePause: () => void;
+  events: GameEvent[];
 }
 
 function createEmptyBoard(): Board {
@@ -122,6 +125,9 @@ export function useTetris(): UseTetrisResult {
   const isPausedRef = useRef(isPaused);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const levelRef = useRef(level);
+  const [events, setEvents] = useState<GameEvent[]>([]);
+  const comboRef = useRef(0);
+  const lastWasTetrisRef = useRef(false);
 
   boardRef.current = board;
   currentPieceRef.current = currentPiece;
@@ -158,7 +164,25 @@ export function useTetris(): UseTetrisResult {
 
     setBoard(clearedBoard);
 
+    // Generate events
+    const newEvents: GameEvent[] = [];
+
     if (linesCleared > 0) {
+      newEvents.push({ type: 'line_clear', count: linesCleared });
+
+      // Combo tracking
+      comboRef.current += 1;
+      if (comboRef.current >= 2) {
+        newEvents.push({ type: 'combo', count: comboRef.current });
+      }
+
+      // B2B Tetris tracking
+      const isTetris = linesCleared === 4;
+      if (lastWasTetrisRef.current && isTetris) {
+        newEvents.push({ type: 'b2b_tetris' });
+      }
+      lastWasTetrisRef.current = isTetris;
+
       setLines((prev) => {
         const newLines = prev + linesCleared;
         const newLevel = Math.floor(newLines / LINES_PER_LEVEL) + 1;
@@ -167,6 +191,16 @@ export function useTetris(): UseTetrisResult {
       });
       const pointValue = POINTS[linesCleared as keyof typeof POINTS] ?? 0;
       setScore((prev) => prev + pointValue * levelRef.current);
+    } else {
+      // Reset combo on no-clear lock
+      comboRef.current = 0;
+      lastWasTetrisRef.current = false;
+    }
+
+    if (newEvents.length > 0) {
+      setEvents(newEvents);
+      // Clear events after a short delay so they're consumed once
+      setTimeout(() => setEvents([]), 50);
     }
 
     const next = nextPiece ?? randomTetromino();
@@ -250,6 +284,12 @@ export function useTetris(): UseTetrisResult {
     const dropDistance = ghost.y - currentPosRef.current.y;
     setScore((prev) => prev + dropDistance * 2);
     setCurrentPos(ghost);
+
+    // Emit hard_drop event
+    if (dropDistance > 0) {
+      setEvents((prev) => [...prev, { type: 'hard_drop', distance: dropDistance }]);
+    }
+
     setTimeout(() => lockPiece(), 0);
   }, [lockPiece]);
 
@@ -268,6 +308,9 @@ export function useTetris(): UseTetrisResult {
     setGameOver(false);
     setIsPaused(false);
     setGameStarted(true);
+    comboRef.current = 0;
+    lastWasTetrisRef.current = false;
+    setEvents([]);
 
     const first = randomTetromino();
     const next = randomTetromino();
@@ -297,18 +340,22 @@ export function useTetris(): UseTetrisResult {
         case 'ArrowLeft':
           e.preventDefault();
           moveLeft();
+          soundManager.playMove();
           break;
         case 'ArrowRight':
           e.preventDefault();
           moveRight();
+          soundManager.playMove();
           break;
         case 'ArrowDown':
           e.preventDefault();
           moveDown();
+          soundManager.playSoftDrop();
           break;
         case 'ArrowUp':
           e.preventDefault();
           rotatePiece();
+          soundManager.playRotate();
           break;
         case ' ':
           e.preventDefault();
@@ -367,5 +414,6 @@ export function useTetris(): UseTetrisResult {
     isPaused,
     startGame,
     togglePause,
+    events,
   };
 }

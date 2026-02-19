@@ -457,6 +457,14 @@ defmodule TetrisGame.GameRoom do
     # 1. Increment tick counter
     state = %{state | tick: state.tick + 1}
 
+    # Clear events from previous tick
+    players_cleared =
+      Map.new(state.players, fn {id, player} ->
+        {id, %{player | events: []}}
+      end)
+
+    state = %{state | players: players_cleared}
+
     # 2. For each alive player: drain input_queue, apply each action via GameLogic
     {players_after_input, garbage_events_from_input} =
       process_all_inputs(state.players, state.player_order)
@@ -474,6 +482,29 @@ defmodule TetrisGame.GameRoom do
 
     # 5. Distribute garbage
     players_after_garbage = distribute_garbage(players_after_gravity, all_garbage_events)
+
+    # Add garbage-related events to players
+    players_after_garbage =
+      Enum.reduce(all_garbage_events, players_after_garbage, fn {sender_id, target_id, count}, acc ->
+        # Add garbage_sent event to sender
+        acc =
+          case Map.fetch(acc, sender_id) do
+            {:ok, sender} ->
+              Map.put(acc, sender_id, %{sender | events: sender.events ++ [%{type: "garbage_sent", target: target_id, count: count}]})
+
+            :error ->
+              acc
+          end
+
+        # Add garbage_received event to target
+        case Map.fetch(acc, target_id) do
+          {:ok, target} ->
+            Map.put(acc, target_id, %{target | events: target.events ++ [%{type: "garbage_received", count: count}]})
+
+          :error ->
+            acc
+        end
+      end)
 
     if all_garbage_events != [] do
       pending_summary =
@@ -536,64 +567,116 @@ defmodule TetrisGame.GameRoom do
 
   defp drain_input_queue(player) do
     game_map = PlayerState.to_game_logic_map(player)
-    {updated_map, garbage_events} = drain_queue(player.input_queue, game_map, player.target, [])
+    {updated_map, garbage_events, player_events} = drain_queue(player.input_queue, game_map, player.target, [], [])
     updated_player = PlayerState.from_game_logic_map(player, updated_map)
-    # Clear the queue since we drained it
-    updated_player = %{updated_player | input_queue: :queue.new()}
+    updated_player = %{updated_player | input_queue: :queue.new(), events: updated_player.events ++ player_events}
     {updated_player, garbage_events}
   end
 
-  defp drain_queue(queue, game_map, target, garbage_events) do
+  defp drain_queue(queue, game_map, target, garbage_events, player_events) do
     case :queue.out(queue) do
       {:empty, _} ->
-        {game_map, garbage_events}
+        {game_map, garbage_events, player_events}
 
       {{:value, action}, rest} ->
-        {new_map, new_garbage} = apply_action(action, game_map, target)
-        drain_queue(rest, new_map, target, garbage_events ++ new_garbage)
+        {new_map, new_garbage, new_events} = apply_action(action, game_map, target)
+        drain_queue(rest, new_map, target, garbage_events ++ new_garbage, player_events ++ new_events)
     end
   end
 
   defp apply_action("move_left", game_map, _target) do
     case GameLogic.move_left(game_map) do
-      {:ok, new_map} -> {new_map, []}
-      :invalid -> {game_map, []}
+      {:ok, new_map} -> {new_map, [], []}
+      :invalid -> {game_map, [], []}
     end
   end
 
   defp apply_action("move_right", game_map, _target) do
     case GameLogic.move_right(game_map) do
-      {:ok, new_map} -> {new_map, []}
-      :invalid -> {game_map, []}
+      {:ok, new_map} -> {new_map, [], []}
+      :invalid -> {game_map, [], []}
     end
   end
 
   defp apply_action("move_down", game_map, target) do
     case GameLogic.move_down(game_map) do
       {:ok, :moved, new_map} ->
-        {new_map, []}
+        {new_map, [], []}
 
       {:ok, :locked, new_map} ->
-        garbage = collect_garbage_events(new_map, target)
-        {Map.delete(new_map, :lines_cleared_this_lock), garbage}
+        sender_id = Map.get(game_map, :player_id)
+        garbage = collect_garbage_events(new_map, target, sender_id)
+        {clean_map, events} = build_lock_events(new_map, 0)
+        {clean_map, garbage, events}
     end
   end
 
   defp apply_action("rotate", game_map, _target) do
     case GameLogic.rotate(game_map) do
-      {:ok, new_map} -> {new_map, []}
-      :invalid -> {game_map, []}
+      {:ok, new_map} -> {new_map, [], []}
+      :invalid -> {game_map, [], []}
     end
   end
 
   defp apply_action("hard_drop", game_map, target) do
     {:ok, new_map} = GameLogic.hard_drop(game_map)
-    garbage = collect_garbage_events(new_map, target)
-    {Map.delete(new_map, :lines_cleared_this_lock), garbage}
+    distance = Map.get(new_map, :hard_drop_distance, 0)
+    sender_id = Map.get(game_map, :player_id)
+    garbage = collect_garbage_events(new_map, target, sender_id)
+    {clean_map, events} = build_lock_events(new_map, distance)
+    {clean_map, garbage, events}
   end
 
   defp apply_action(_unknown, game_map, _target) do
-    {game_map, []}
+    {game_map, [], []}
+  end
+
+  # -- Lock event building --
+
+  defp build_lock_events(game_map, hard_drop_distance) do
+    lines_cleared = Map.get(game_map, :lines_cleared_this_lock, 0)
+    combo_count = Map.get(game_map, :combo_count_this_lock, 0)
+    is_b2b = Map.get(game_map, :is_b2b_tetris_this_lock, false)
+
+    events = []
+
+    events =
+      if hard_drop_distance > 0 do
+        events ++ [%{type: "hard_drop", distance: hard_drop_distance}]
+      else
+        events
+      end
+
+    events =
+      if lines_cleared > 0 do
+        events ++ [%{type: "line_clear", count: lines_cleared}]
+      else
+        events
+      end
+
+    events =
+      if combo_count >= 2 do
+        events ++ [%{type: "combo", count: combo_count}]
+      else
+        events
+      end
+
+    events =
+      if is_b2b do
+        events ++ [%{type: "b2b_tetris"}]
+      else
+        events
+      end
+
+    # Clean transient keys from game_map
+    clean_map =
+      game_map
+      |> Map.delete(:lines_cleared_this_lock)
+      |> Map.delete(:combo_count_this_lock)
+      |> Map.delete(:is_b2b_tetris_this_lock)
+      |> Map.delete(:hard_drop_distance)
+
+    {clean_map, events}
   end
 
   # -- Gravity processing --
@@ -615,9 +698,10 @@ defmodule TetrisGame.GameRoom do
 
     case GameLogic.apply_gravity(game_map) do
       {:ok, :locked, new_map} ->
-        garbage = collect_garbage_events(new_map, player.target)
-        clean_map = Map.delete(new_map, :lines_cleared_this_lock)
+        garbage = collect_garbage_events(new_map, player.target, player_id)
+        {clean_map, events} = build_lock_events(new_map, 0)
         updated_player = PlayerState.from_game_logic_map(player, clean_map)
+        updated_player = %{updated_player | events: updated_player.events ++ events}
         {Map.put(acc_players, player_id, updated_player), acc_garbage ++ garbage}
 
       {:ok, _status, new_map} ->
@@ -628,7 +712,7 @@ defmodule TetrisGame.GameRoom do
 
   # -- Garbage distribution --
 
-  defp collect_garbage_events(game_map, target) do
+  defp collect_garbage_events(game_map, target, sender_id) do
     lines_cleared = Map.get(game_map, :lines_cleared_this_lock, 0)
 
     if lines_cleared > 0 do
@@ -641,14 +725,14 @@ defmodule TetrisGame.GameRoom do
 
     if lines_cleared >= 2 and target != nil do
       garbage_count = lines_cleared - 1
-      [{target, garbage_count}]
+      [{sender_id, target, garbage_count}]
     else
       []
     end
   end
 
   defp distribute_garbage(players, garbage_events) do
-    Enum.reduce(garbage_events, players, fn {target_id, count}, acc_players ->
+    Enum.reduce(garbage_events, players, fn {_sender_id, target_id, count}, acc_players ->
       case Map.fetch(acc_players, target_id) do
         {:ok, target_player} -> add_garbage_to_player(acc_players, target_id, target_player, count)
         :error -> acc_players
@@ -703,7 +787,14 @@ defmodule TetrisGame.GameRoom do
         prev != nil and curr != nil and prev.alive and not curr.alive
       end)
 
-    {current_players, new_eliminations}
+    # Add elimination events
+    updated_players =
+      Enum.reduce(new_eliminations, current_players, fn player_id, acc ->
+        player = acc[player_id]
+        Map.put(acc, player_id, %{player | events: player.events ++ [%{type: "elimination"}]})
+      end)
+
+    {updated_players, new_eliminations}
   end
 
   # -- Broadcasting --

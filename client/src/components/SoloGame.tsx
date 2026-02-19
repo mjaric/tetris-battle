@@ -1,5 +1,10 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useTetris } from '../hooks/useTetris.ts';
+import { useSoundEffects } from '../hooks/useSoundEffects.ts';
+import { computeDangerLevel } from '../utils/dangerZone.ts';
+import { soundManager } from '../audio/SoundManager.ts';
+import AudioControls from './AudioControls.tsx';
 import Board from './Board.tsx';
 import Sidebar from './Sidebar.tsx';
 import type { ReactNode } from 'react';
@@ -30,8 +35,17 @@ function Overlay({
 
 export default function SoloGame() {
   const navigate = useNavigate();
-  const { board, score, lines, level, nextPiece, gameOver, gameStarted, isPaused, startGame, togglePause } =
+  const { board, score, lines, level, nextPiece, gameOver, gameStarted, isPaused, startGame, togglePause, events } =
     useTetris();
+
+  useSoundEffects(events);
+  const dangerLevel = computeDangerLevel(board);
+
+  useEffect(() => {
+    if (gameStarted) {
+      soundManager.init();
+    }
+  }, [gameStarted]);
 
   const nextPieceObj = nextPiece ? { shape: nextPiece.shape, color: nextPiece.color } : null;
 
@@ -42,7 +56,7 @@ export default function SoloGame() {
       </h1>
       <div className="flex items-start">
         <div className="relative">
-          <Board board={board} />
+          <Board board={board} events={events} dangerLevel={dangerLevel} />
           {!gameStarted && (
             <Overlay onAction={startGame} actionLabel="Start Game">
               <div className="mb-4 text-lg text-gray-400">Press Start to Play</div>
@@ -68,6 +82,7 @@ export default function SoloGame() {
       >
         Back to Menu
       </button>
+      {gameStarted && <AudioControls />}
     </div>
   );
 }

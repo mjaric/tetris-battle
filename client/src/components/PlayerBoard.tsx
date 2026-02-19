@@ -1,4 +1,7 @@
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../constants.ts';
+import type { GameEvent } from '../types.ts';
+import type { DangerLevel } from '../utils/dangerZone.ts';
+import { useAnimations } from '../hooks/useAnimations.ts';
 
 type GlowLevel = 'self' | 'target' | 'other' | 'eliminated';
 
@@ -16,6 +19,8 @@ interface PlayerBoardProps {
   targetNickname?: string | undefined;
   level?: number | undefined;
   latency?: number | null | undefined;
+  events?: GameEvent[];
+  dangerLevel?: DangerLevel;
 }
 
 interface PlayerCellProps {
@@ -245,7 +250,10 @@ export default function PlayerBoard({
   targetNickname,
   level,
   latency,
+  events = [],
+  dangerLevel = 'none',
 }: PlayerBoardProps) {
+  const { boardClassName, overlays, dangerClassName, garbageMeterPulse } = useAnimations(events, dangerLevel, isMe);
   const fontSize = Math.max(8, Math.round(cellSize * 0.4));
   const alpha = tintAlpha(glowLevel);
   const glow = glowStyles(playerHue, glowLevel);
@@ -421,6 +429,7 @@ export default function PlayerBoard({
       )}
 
       <div
+        className={boardClassName}
         style={{
           position: 'relative',
           ...glow,
@@ -428,7 +437,9 @@ export default function PlayerBoard({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <GarbageMeter count={pendingGarbage} cellSize={cellSize} totalRows={BOARD_HEIGHT} />
+          <div className={garbageMeterPulse ? 'anim-garbage-meter-pulse' : ''}>
+            <GarbageMeter count={pendingGarbage} cellSize={cellSize} totalRows={BOARD_HEIGHT} />
+          </div>
           <div
             style={{
               display: 'grid',
@@ -442,6 +453,43 @@ export default function PlayerBoard({
             )}
           </div>
         </div>
+
+        {/* Danger zone overlay */}
+            {dangerClassName && (
+              <div
+                className={dangerClassName}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: 4,
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              />
+            )}
+
+            {/* Floating text overlays */}
+            {overlays.map((overlay) => (
+              <div
+                key={overlay.id}
+                className={overlay.className}
+                style={{
+                  position: 'absolute',
+                  top: '40%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  color: overlay.color,
+                  fontWeight: 'bold',
+                  fontSize: Math.max(14, Math.round(cellSize * 0.8)),
+                  textShadow: `0 0 10px ${overlay.color}`,
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {overlay.text}
+              </div>
+            ))}
 
         {alpha > 0 && (
           <div

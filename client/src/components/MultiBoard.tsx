@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { TETROMINOES } from '../constants.ts';
 import type { GameState } from '../types.ts';
 import { calculateCellSize } from '../utils/calculateCellSize.ts';
+import { useGameEvents } from '../hooks/useGameEvents.ts';
+import { computeDangerLevel } from '../utils/dangerZone.ts';
 import PlayerBoard from './PlayerBoard.tsx';
 
 interface MultiBoardProps {
@@ -36,6 +38,8 @@ function useViewportWidth(): number {
 export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoardProps) {
   const viewportWidth = useViewportWidth();
   const myState = gameState.players[myPlayerId];
+  const { myEvents, opponentEvents } = useGameEvents(gameState, myPlayerId);
+  const dangerLevel = myState ? computeDangerLevel(myState.board) : 'none' as const;
   if (!myState) return null;
 
   const sortedPlayers = Object.entries(gameState.players).sort(([a], [b]) => {
@@ -84,6 +88,8 @@ export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoar
               targetNickname={isMe ? targetNickname : undefined}
               level={isMe ? myState.level : undefined}
               latency={isMe ? latency : undefined}
+              events={isMe ? myEvents : (opponentEvents.get(id) ?? [])}
+              dangerLevel={isMe ? dangerLevel : 'none'}
             />
           );
         })}
