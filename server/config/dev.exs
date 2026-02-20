@@ -1,5 +1,14 @@
 import Config
 
+config :tetris, Platform.Repo,
+  username: "postgres",
+  password: "password",
+  hostname: "localhost",
+  database: "tetris_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 config :tetris, TetrisWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,

@@ -6,6 +6,12 @@ config :tetris, TetrisWeb.Endpoint,
   pubsub_server: Tetris.PubSub,
   server: true
 
+config :tetris, Platform.Repo,
+  migration_primary_key: [type: :binary_id],
+  migration_timestamps: [type: :utc_datetime]
+
+config :tetris, ecto_repos: [Platform.Repo]
+
 config :tetris, :generators, migration: false
 
 config :logger, :console,
