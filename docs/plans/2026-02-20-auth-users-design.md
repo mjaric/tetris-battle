@@ -22,6 +22,8 @@ Add authentication, user accounts, friends system, game history with replay reco
 | 10 | Replay storage | NATS as event bus, Postgres for long-term archive |
 | 11 | Key moments | Heuristic detection only (no LLM commentary in this phase) |
 | 12 | LLM commentary | Deferred to a future phase |
+| 13 | Key moment storage | Events published back to NATS (not a separate DB table) — archived with replay events |
+| 14 | Implementation split | Plan 1: Auth/Users/Social, Plan 2: History/Streaming/Moments |
 
 ---
 
