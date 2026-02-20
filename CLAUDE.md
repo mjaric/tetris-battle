@@ -8,13 +8,15 @@ Multiplayer Tetris battle game. React frontend + Elixir/Phoenix backend communic
 
 ## Development Commands
 
-### Client (React, in `client/`)
+### Client (React/TypeScript, in `client/`)
 
 ```bash
-cd client && npm start          # Dev server on :3000
-cd client && npm test            # Jest in watch mode
-cd client && npm test -- --watchAll=false  # Jest single run
-cd client && npm run build       # Production build
+cd client && npm install       # Install dependencies
+cd client && npm run dev       # Vite dev server on :3000
+cd client && npm run build     # TypeScript check + Vite production build
+cd client && npm run lint      # OxLint
+cd client && npm run format    # Prettier (write)
+cd client && npm run format:check  # Prettier (check only)
 ```
 
 ### Server (Elixir/Phoenix, in `server/`)
@@ -25,11 +27,27 @@ cd server && mix phx.server      # Dev server on :4000
 cd server && mix test            # Run all tests
 cd server && mix test test/tetris/board_test.exs        # Single test file
 cd server && mix test test/tetris/board_test.exs:42     # Single test (line)
+cd server && mix format          # Format code
+cd server && mix credo --strict  # Lint
 ```
 
 ### Running Both
 
-Start the Phoenix server (port 4000) and React dev server (port 3000) simultaneously. The client connects to `ws://localhost:4000/socket` (configurable via `REACT_APP_SOCKET_URL`).
+Start the Phoenix server (port 4000) and Vite dev server (port 3000) simultaneously. The client connects to `ws://localhost:4000/socket`.
+
+## Available MCP Tools
+
+Two MCP tool sets are available for looking up library documentation:
+
+### context7 (general — works for any language/framework)
+
+Use `mcp__context7__resolve-library-id` to find a library ID, then `mcp__context7__query-docs` to query its docs. Works for both client (React, Vite, Tailwind, etc.) and server (Phoenix, Plug, etc.) dependencies — useful when tidewave is not running or for non-Elixir deps.
+
+### tidewave (Elixir-specific — requires running Phoenix server)
+
+Use `mcp__tidewave__get_docs`, `mcp__tidewave__get_source_location`, `mcp__tidewave__project_eval`, `mcp__tidewave__search_package_docs`, and `mcp__tidewave__get_logs` for Elixir/Phoenix work. These only work when the Phoenix dev server is running (`mix phx.server`). If tidewave tools fail, ask the user to start the server.
+
+For dependencies not yet installed, consult https://hexdocs.pm/{package_name} via `WebFetch` or use context7 tools.
 
 ## Architecture
 
@@ -59,9 +77,9 @@ Each game room is a `TetrisGame.GameRoom` GenServer spawned under `RoomSuperviso
 
 ### Client Structure
 
-- **Components** — `MainMenu`, `NicknameForm`, `Lobby`, `WaitingRoom`, `MultiBoard`, `MiniBoard`, `Board`, `Results`, `TargetIndicator`, `Sidebar`, `NextPiece`
-- **Hooks** — `useTetris` (solo, client-only game loop), `useSocket`/`useChannel` (Phoenix connection lifecycle), `useMultiplayerGame` (MP state + input dispatch)
-- **`App.js`** — Screen state machine: `menu → solo | nickname → lobby → waiting → playing → results`
+- **Components** — `MainMenu`, `NicknameForm`, `Lobby`, `WaitingRoom`, `MultiBoard`, `PlayerBoard`, `Board`, `Results`, `TargetIndicator`, `Sidebar`, `NextPiece`, `SoloGame`, `GameSession`
+- **Hooks** — `useTetris` (solo, client-only game loop), `useSocket`/`useChannel` (Phoenix connection lifecycle), `useMultiplayerGame` (MP state + input dispatch), `useAnimations`, `useSoundEffects`, `useGameEvents`, `useLatency`
+- **`App.tsx`** — Screen state machine: `menu → solo | nickname → lobby → waiting → playing → results`
 
 ### Client-Server Protocol
 
@@ -84,9 +102,10 @@ Clear N lines → send (N-1) garbage rows to targeted opponent (only for N >= 2)
 
 ## Key Conventions
 
-- All dependencies in `server/mix.exs` are pinned to git tags with `override: true` (no Hex)
-- `PlayerState.to_game_logic_map/1` and `from_game_logic_map/2` bridge the struct↔map boundary between `PlayerState` and `GameLogic`
+- Server dependencies are fetched from Hex (pinned in `mix.lock`)
+- Client dependencies are from npm (`package-lock.json`)
+- `PlayerState.to_game_logic_map/1` and `from_game_logic_map/2` bridge the struct/map boundary between `PlayerState` and `GameLogic`
 - Solo mode runs entirely client-side via `useTetris` hook — no server involvement
-- Piece definitions and SRS wall kick data are duplicated between client (`constants.js`) and server (`Piece`, `WallKicks` modules)
-- Board dimensions: 10 wide × 20 tall (standard Tetris)
+- Piece definitions and SRS wall kick data are duplicated between client (`constants.ts`) and server (`Piece`, `WallKicks` modules)
+- Board dimensions: 10 wide x 20 tall (standard Tetris)
 - Test port: 4002 (server disabled in test config)
