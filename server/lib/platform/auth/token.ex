@@ -51,6 +51,9 @@ defmodule Platform.Auth.Token do
     jwk = signing_key()
 
     case JOSE.JWT.verify(jwk, token) do
+      {true, %JOSE.JWT{fields: %{"type" => "registration"}}, _jws} ->
+        {:error, :invalid_token}
+
       {true, %JOSE.JWT{fields: claims}, _jws} ->
         validate_expiry(claims)
 
@@ -63,6 +66,84 @@ defmodule Platform.Auth.Token do
 
   def verify(_not_binary), do: {:error, :invalid_token}
 
+  @registration_ttl 600
+
+  @doc """
+  Signs a JWT containing OAuth registration data.
+
+  The token carries provider info for the nickname-selection
+  step and expires in #{@registration_ttl} seconds by default.
+
+  Options:
+    * `:ttl` - time-to-live in seconds (default: #{@registration_ttl})
+  """
+  @spec sign_registration(map(), keyword()) :: String.t()
+  def sign_registration(data, opts \\ []) do
+    ttl = Keyword.get(opts, :ttl, @registration_ttl)
+    now = System.system_time(:second)
+
+    claims = %{
+      "type" => "registration",
+      "provider" => data.provider,
+      "provider_id" => data.provider_id,
+      "name" => data.name,
+      "email" => data[:email],
+      "avatar_url" => data[:avatar_url],
+      "iat" => now,
+      "exp" => now + ttl
+    }
+
+    jwk = signing_key()
+    jws = JOSE.JWS.from_map(%{"alg" => "HS256"})
+    jwt = JOSE.JWT.from_map(claims)
+
+    {_, token} =
+      jwk
+      |> JOSE.JWT.sign(jws, jwt)
+      |> JOSE.JWS.compact()
+
+    token
+  end
+
+  @doc """
+  Verifies a registration JWT and extracts OAuth provider data.
+
+  Returns `{:ok, data}` with provider fields on success, or
+  `{:error, :invalid_token}` / `{:error, :token_expired}` on failure.
+  Rejects non-registration tokens.
+  """
+  @spec verify_registration(String.t() | nil) ::
+          {:ok, map()} | {:error, :invalid_token | :token_expired}
+  def verify_registration(token) when is_binary(token) do
+    jwk = signing_key()
+
+    case JOSE.JWT.verify(jwk, token) do
+      {true, %JOSE.JWT{fields: %{"type" => "registration"} = claims}, _jws} ->
+        now = System.system_time(:second)
+        exp = Map.get(claims, "exp", 0)
+
+        if exp > now do
+          {:ok,
+           %{
+             provider: claims["provider"],
+             provider_id: claims["provider_id"],
+             name: claims["name"],
+             email: null_to_nil(claims["email"]),
+             avatar_url: null_to_nil(claims["avatar_url"])
+           }}
+        else
+          {:error, :token_expired}
+        end
+
+      _invalid ->
+        {:error, :invalid_token}
+    end
+  rescue
+    _exception -> {:error, :invalid_token}
+  end
+
+  def verify_registration(_not_binary), do: {:error, :invalid_token}
+
   defp validate_expiry(claims) do
     now = System.system_time(:second)
     exp = Map.get(claims, "exp", 0)
@@ -73,6 +154,9 @@ defmodule Platform.Auth.Token do
       {:error, :token_expired}
     end
   end
+
+  defp null_to_nil(:null), do: nil
+  defp null_to_nil(value), do: value
 
   defp signing_key do
     secret =
