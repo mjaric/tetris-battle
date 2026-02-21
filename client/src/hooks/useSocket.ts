@@ -10,7 +10,7 @@ interface UseSocketResult {
   lobbyChannel: Channel | null;
 }
 
-export function useSocket(nickname: string | null): UseSocketResult {
+export function useSocket(token: string | null): UseSocketResult {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -19,9 +19,9 @@ export function useSocket(nickname: string | null): UseSocketResult {
   const lobbyRef = useRef<Channel | null>(null);
 
   useEffect(() => {
-    if (!nickname) return;
+    if (!token) return;
 
-    const s = new Socket(SOCKET_URL, { params: { nickname } });
+    const s = new Socket(SOCKET_URL, { params: { token } });
     s.connect();
     s.onOpen(() => setConnected(true));
     s.onClose(() => setConnected(false));
@@ -45,7 +45,7 @@ export function useSocket(nickname: string | null): UseSocketResult {
       setConnected(false);
       setPlayerId(null);
     };
-  }, [nickname]);
+  }, [token]);
 
   return { socket, connected, playerId, lobbyChannel };
 }
