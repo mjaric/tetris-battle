@@ -15,3 +15,10 @@ config :tetris, TetrisWeb.Endpoint,
 
 config :logger, level: :warning
 config :phoenix, :plug_init_mode, :runtime
+
+config :ueberauth, Ueberauth,
+  providers: [
+    google: {Ueberauth.Strategy.Google, []},
+    github: {Ueberauth.Strategy.Github, []},
+    discord: {Ueberauth.Strategy.Discord, []}
+  ]

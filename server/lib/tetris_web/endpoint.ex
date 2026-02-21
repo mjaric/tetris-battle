@@ -29,5 +29,12 @@ defmodule TetrisWeb.Endpoint do
 
   plug(Plug.MethodOverride)
   plug(Plug.Head)
+
+  plug(Plug.Session,
+    store: :cookie,
+    key: "_tetris_session",
+    signing_salt: "auth_session"
+  )
+
   plug(TetrisWeb.Router)
 end

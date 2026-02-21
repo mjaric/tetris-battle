@@ -29,4 +29,22 @@ if config_env() == :prod do
     end
 
   config :tetris, cors_origins: cors_origins
+
+  client_url =
+    System.get_env("CLIENT_URL") ||
+      raise "environment variable CLIENT_URL is missing."
+
+  config :tetris, :client_url, client_url
+
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: System.get_env("GOOGLE_CLIENT_ID"),
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: System.get_env("GITHUB_CLIENT_ID"),
+    client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Discord.OAuth,
+    client_id: System.get_env("DISCORD_CLIENT_ID"),
+    client_secret: System.get_env("DISCORD_CLIENT_SECRET")
 end

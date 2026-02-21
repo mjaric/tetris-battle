@@ -42,7 +42,11 @@ defmodule Tetris.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.12"},
       {:postgrex, "~> 0.20"},
-      {:jose, "~> 1.11"}
+      {:jose, "~> 1.11"},
+      {:ueberauth, "~> 0.10"},
+      {:ueberauth_google, "~> 0.12"},
+      {:ueberauth_github, "~> 0.8"},
+      {:ueberauth_discord, "~> 0.7"}
     ]
   end
 
