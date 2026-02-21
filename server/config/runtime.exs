@@ -36,15 +36,18 @@ if config_env() == :prod do
 
   config :tetris, :client_url, client_url
 
-  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
-    client_id: System.get_env("GOOGLE_CLIENT_ID"),
-    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
-
-  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-    client_id: System.get_env("GITHUB_CLIENT_ID"),
-    client_secret: System.get_env("GITHUB_CLIENT_SECRET")
-
-  config :ueberauth, Ueberauth.Strategy.Discord.OAuth,
-    client_id: System.get_env("DISCORD_CLIENT_ID"),
-    client_secret: System.get_env("DISCORD_CLIENT_SECRET")
 end
+
+# OAuth provider credentials (all environments).
+# In dev, set these env vars or leave unset (guest login still works).
+config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+  client_id: System.get_env("GOOGLE_CLIENT_ID"),
+  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+  client_id: System.get_env("GITHUB_CLIENT_ID"),
+  client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Discord.OAuth,
+  client_id: System.get_env("DISCORD_CLIENT_ID"),
+  client_secret: System.get_env("DISCORD_CLIENT_SECRET")

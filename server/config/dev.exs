@@ -26,14 +26,3 @@ config :logger, :console, format: "[$level] $message\n"
 config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
-config :ueberauth, Ueberauth.Strategy.Google.OAuth,
-  client_id: {System, :get_env, ["GOOGLE_CLIENT_ID"]},
-  client_secret: {System, :get_env, ["GOOGLE_CLIENT_SECRET"]}
-
-config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-  client_id: {System, :get_env, ["GITHUB_CLIENT_ID"]},
-  client_secret: {System, :get_env, ["GITHUB_CLIENT_SECRET"]}
-
-config :ueberauth, Ueberauth.Strategy.Discord.OAuth,
-  client_id: {System, :get_env, ["DISCORD_CLIENT_ID"]},
-  client_secret: {System, :get_env, ["DISCORD_CLIENT_SECRET"]}
