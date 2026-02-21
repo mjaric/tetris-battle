@@ -41,7 +41,8 @@ defmodule Tetris.MixProject do
       {:castore, "~> 1.0.17"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.12"},
-      {:postgrex, "~> 0.20"}
+      {:postgrex, "~> 0.20"},
+      {:jose, "~> 1.11"}
     ]
   end
 
