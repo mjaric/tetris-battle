@@ -35,7 +35,6 @@ if config_env() == :prod do
       raise "environment variable CLIENT_URL is missing."
 
   config :tetris, :client_url, client_url
-
 end
 
 # OAuth provider credentials (all environments).

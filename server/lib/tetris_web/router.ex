@@ -24,6 +24,8 @@ defmodule TetrisWeb.Router do
 
     post("/guest", AuthController, :guest)
     post("/refresh", AuthController, :refresh)
+    post("/register", AuthController, :register)
+    get("/check-nickname/:nickname", AuthController, :check_nickname)
   end
 
   scope "/api", TetrisWeb do
