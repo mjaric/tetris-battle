@@ -66,7 +66,7 @@ defmodule PlatformWeb.AuthControllerTest do
         |> get("/auth/google/callback")
 
       assert redirected_to(conn) =~
-               "http://localhost:3000/auth/callback#token="
+               "http://localhost:4000/oauth/callback#token="
     end
 
     test "redirects to client with error on failure", %{conn: conn} do

@@ -32,7 +32,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/oauth/callback" element={<AuthCallback />} />
       <Route
         path="/"
         element={

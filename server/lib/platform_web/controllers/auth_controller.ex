@@ -23,14 +23,14 @@ defmodule PlatformWeb.AuthController do
         client_url = Application.get_env(:tetris, :client_url)
 
         redirect(conn,
-          external: "#{client_url}/auth/callback#token=#{token}"
+          external: "#{client_url}/oauth/callback#token=#{token}"
         )
 
       {:error, _changeset} ->
         client_url = Application.get_env(:tetris, :client_url)
 
         redirect(conn,
-          external: "#{client_url}/auth/callback?error=account_creation_failed"
+          external: "#{client_url}/oauth/callback?error=account_creation_failed"
         )
     end
   end
@@ -44,7 +44,7 @@ defmodule PlatformWeb.AuthController do
     client_url = Application.get_env(:tetris, :client_url)
 
     redirect(conn,
-      external: "#{client_url}/auth/callback?error=#{URI.encode(reason)}"
+      external: "#{client_url}/oauth/callback?error=#{URI.encode(reason)}"
     )
   end
 

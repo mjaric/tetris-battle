@@ -160,7 +160,7 @@ Each tick: drain input queue -> apply moves via `GameLogic` -> apply gravity -> 
 - Room auth uses HMAC-SHA256 challenge-response (nonce-based, no plaintext passwords over wire).
 - All game state broadcasts go through `Phoenix.Channel.broadcast/3` on `game:{room_id}`.
 - User auth uses JWT (HS256, key derived from `secret_key_base`). WebSocket connections require a valid JWT token. JWT includes `sub` (user_id) and `name` (display_name) claims.
-- OAuth login via Ueberauth (Google, GitHub, Discord) redirects to `/auth/callback#token=JWT`.
+- OAuth login via Ueberauth (Google, GitHub, Discord) redirects to `/oauth/callback#token=JWT`.
 - Guest login via `POST /api/auth/guest` creates an anonymous user and returns a JWT.
 - Token refresh via `POST /api/auth/refresh` with `Authorization: Bearer <token>`.
 

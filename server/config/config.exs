@@ -28,6 +28,6 @@ config :ueberauth, Ueberauth,
     discord: {Ueberauth.Strategy.Discord, [default_scope: "identify email"]}
   ]
 
-config :tetris, :client_url, "http://localhost:3000"
+config :tetris, :client_url, "http://localhost:4000"
 
 import_config "#{config_env()}.exs"

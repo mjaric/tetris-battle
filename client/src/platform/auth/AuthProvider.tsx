@@ -20,13 +20,30 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+function base64ToBytes(b64: string): Uint8Array {
+  const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
+  const out: number[] = [];
+  for (let i = 0; i < padded.length; i += 4) {
+    const a = B64.indexOf(padded[i]!);
+    const b = B64.indexOf(padded[i + 1]!);
+    const c = B64.indexOf(padded[i + 2]!);
+    const d = B64.indexOf(padded[i + 3]!);
+    out.push((a << 2) | (b >> 4));
+    if (padded[i + 2] !== '=') out.push(((b & 15) << 4) | (c >> 2));
+    if (padded[i + 3] !== '=') out.push(((c & 3) << 6) | d);
+  }
+  return new Uint8Array(out);
+}
+
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const payload = parts[1];
   if (!payload) return null;
-  const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-  return JSON.parse(json) as Record<string, unknown>;
+  const bytes = base64ToBytes(payload.replace(/-/g, '+').replace(/_/g, '/'));
+  return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
 }
 
 function isTokenExpired(token: string): boolean {

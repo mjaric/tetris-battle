@@ -13,7 +13,7 @@ export default function AuthCallback() {
     if (hash.startsWith('#token=')) {
       const token = hash.slice('#token='.length);
       setToken(token);
-      window.history.replaceState(null, '', '/auth/callback');
+      window.history.replaceState(null, '', '/oauth/callback');
       navigate('/', { replace: true });
       return;
     }
