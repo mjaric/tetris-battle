@@ -10,8 +10,7 @@ type NicknameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { registrationToken, registrationData, token, setToken, setRegistrationToken } =
-    useAuthContext();
+  const { registrationToken, registrationData, token, setToken, setRegistrationToken } = useAuthContext();
   const [displayName, setDisplayName] = useState('');
   const [nickname, setNickname] = useState('');
   const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>('idle');
@@ -33,9 +32,7 @@ export default function RegisterPage() {
 
     setNicknameStatus('checking');
 
-    const resp = await fetch(
-      `${API_URL}/api/auth/check-nickname/${encodeURIComponent(value)}`
-    );
+    const resp = await fetch(`${API_URL}/api/auth/check-nickname/${encodeURIComponent(value)}`);
 
     if (resp.ok) {
       const data = (await resp.json()) as { available: boolean };
@@ -97,7 +94,11 @@ export default function RegisterPage() {
           errors?: Record<string, string[]>;
         };
         setError(
-          data.error ?? Object.values(data.errors ?? {}).flat().join(', ') ?? 'Registration failed'
+          data.error ??
+            Object.values(data.errors ?? {})
+              .flat()
+              .join(', ') ??
+            'Registration failed'
         );
         setSubmitting(false);
       }
@@ -148,17 +149,13 @@ export default function RegisterPage() {
           />
           <div className="mt-1 flex items-center gap-1 text-xs">
             {nicknameStatus === 'idle' && (
-              <span className="text-gray-600">
-                3-20 chars, letters/digits/underscores, starts with a letter
-              </span>
+              <span className="text-gray-600">3-20 chars, letters/digits/underscores, starts with a letter</span>
             )}
             {nicknameStatus === 'checking' && <span className="text-gray-400">Checking...</span>}
             {nicknameStatus === 'available' && <span className="text-green-400">Available</span>}
             {nicknameStatus === 'taken' && <span className="text-red-400">Already taken</span>}
             {nicknameStatus === 'invalid' && (
-              <span className="text-red-400">
-                Must start with a letter, 3-20 chars, letters/digits/underscores
-              </span>
+              <span className="text-red-400">Must start with a letter, 3-20 chars, letters/digits/underscores</span>
             )}
           </div>
         </div>
