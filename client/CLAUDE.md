@@ -46,15 +46,20 @@ When looking up documentation for any dependency, use `mcp__context7__resolve-li
 
 ```
 src/
-  App.tsx                    # Root component, screen state machine
+  App.tsx                    # Root component, routing, auth guards
   main.tsx                   # Entry point, React root render
   index.css                  # Global styles (Tailwind imports)
   constants.ts               # Tetromino shapes, colors, SRS wall kick data
   types.ts                   # Shared TypeScript types
   phoenix.d.ts               # Type declarations for phoenix JS client
+  platform/
+    auth/
+      AuthProvider.tsx       # Auth context (JWT decode, localStorage, refresh)
+      AuthCallback.tsx       # OAuth callback handler (extracts token from URL hash)
+      LoginScreen.tsx        # Login page (OAuth buttons + guest login)
+      useAuth.ts             # Auth actions hook (login, logout, guest)
   components/
-    MainMenu.tsx             # Start screen (solo / multiplayer)
-    NicknameForm.tsx         # Player name input
+    MainMenu.tsx             # Start screen (solo / multiplayer, shows user name)
     Lobby.tsx                # Room list, create/join rooms
     WaitingRoom.tsx          # Pre-game room (players list, start button)
     GameSession.tsx          # Active multiplayer game container
@@ -71,7 +76,7 @@ src/
     LatencyIndicator.tsx     # Network latency display
   hooks/
     useTetris.ts             # Solo game loop (client-only, no server)
-    useSocket.ts             # Phoenix WebSocket connection lifecycle
+    useSocket.ts             # Phoenix WebSocket connection (JWT auth)
     useChannel.ts            # Phoenix channel join/leave lifecycle
     useMultiplayerGame.ts    # Multiplayer state management + input dispatch
     useAnimations.ts         # CSS animations for game events
@@ -91,7 +96,19 @@ src/
 
 ### Screen Flow
 
-`App.tsx` manages a state machine: `menu` -> `solo` | `nickname` -> `lobby` -> `waiting` -> `playing` -> `results`
+`App.tsx` uses react-router with auth guards: `/login` -> `/` (MainMenu) -> `/solo` | `/lobby` -> `/room/:roomId`
+
+- `RequireAuth` guard redirects to `/login` if not authenticated
+- `RequireSocket` guard shows "Connecting..." until WebSocket is ready
+- `LoginScreen` redirects to `/` when authenticated (handles post-login navigation)
+
+### Authentication
+
+- `AuthProvider` manages JWT token in React context + localStorage
+- JWT payload is decoded client-side to extract `sub` (user ID) and `name` (display name)
+- `useAuth` hook provides login actions: OAuth redirects, guest POST, logout
+- `useSocket` sends the JWT as a socket param for server-side verification
+- `VITE_API_URL` env var overrides the API server URL (default: `http://localhost:4000`)
 
 ### Solo vs Multiplayer
 
@@ -100,7 +117,7 @@ src/
 
 ### Phoenix Channel Integration
 
-- `useSocket` manages the WebSocket connection to `ws://localhost:4000/socket`
+- `useSocket` manages the WebSocket connection to `ws://localhost:4000/socket` with JWT token
 - `useChannel` handles joining/leaving specific channels (`lobby:main`, `game:{room_id}`)
 - The `phoenix` npm package provides the JS client for Phoenix channels
 

@@ -6,6 +6,7 @@ defmodule Tetris.MixProject do
       app: :tetris,
       version: "0.1.0",
       elixir: "~> 1.18",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: Mix.compilers(),
@@ -38,13 +39,26 @@ defmodule Tetris.MixProject do
       {:websock_adapter, "~> 0.5.9"},
       {:mime, "~> 2.0.7"},
       {:castore, "~> 1.0.17"},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ecto_sql, "~> 3.12"},
+      {:postgrex, "~> 0.20"},
+      {:jose, "~> 1.11"},
+      {:ueberauth, "~> 0.10"},
+      {:ueberauth_google, "~> 0.12"},
+      {:ueberauth_github, "~> 0.8"},
+      {:ueberauth_discord, "~> 0.7"}
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp aliases do
     [
-      setup: ["deps.get"]
+      setup: ["deps.get", "ecto.setup"],
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
 end

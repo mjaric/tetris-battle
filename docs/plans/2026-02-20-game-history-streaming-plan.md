@@ -1,16 +1,18 @@
-# Game History & Event Streaming — Implementation Plan (Plan 2 of 2)
+# Game History & Event Streaming — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add match history with replay recording, NATS JetStream event streaming, heuristic key moment detection, solo stats reporting, and match history UI.
+**Goal:** Add match history with NATS JetStream event streaming, heuristic key moment detection, solo stats reporting, and match history UI.
 
-**Architecture:** Game events published to NATS JetStream during tick loop. Two consumers: replay archiver (compresses and stores in Postgres) and key moment detector (detects moments, publishes back as events to NATS, included in archived replay). PostgreSQL stores match metadata, per-player stats, and compressed replay blobs.
+**Architecture:** Game events published to NATS JetStream during tick loop. Two consumers: Match Projector (projects game results to Postgres) and Key Moment Detector (detects moments, publishes back to same stream). JetStream is the event store (90-day retention). Postgres stores match metadata and player stats as permanent read-model projections.
 
-**Tech Stack:** Gnat (NATS client), Ecto (existing from Plan 1), zlib (compression)
+**Tech Stack:** Gnat (NATS client), Ecto (existing from Auth plan)
 
-**Design doc:** `docs/plans/2026-02-20-auth-users-design.md`
+**Design doc:** `docs/plans/2026-02-20-game-history-streaming-design.md`
 
-**Depends on:** Plan 1 (Auth, Users & Social) — needs user IDs, Ecto repo, Firebase auth
+**Depends on:** Auth & Registration plan — needs user IDs, Ecto repo, JWT verification
+
+**NOTE:** This plan needs revision to match the updated design. Key changes: remove replay_events table, remove ReplayArchiver, remove ReplayCleaner, add MatchProjector consumer, use NATS JetStream as event store instead of Postgres archive.
 
 ---
 

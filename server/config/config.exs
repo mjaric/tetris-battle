@@ -6,6 +6,12 @@ config :tetris, TetrisWeb.Endpoint,
   pubsub_server: Tetris.PubSub,
   server: true
 
+config :tetris, Platform.Repo,
+  migration_primary_key: [type: :binary_id],
+  migration_timestamps: [type: :utc_datetime]
+
+config :tetris, ecto_repos: [Platform.Repo]
+
 config :tetris, :generators, migration: false
 
 config :logger, :console,
@@ -13,5 +19,15 @@ config :logger, :console,
   metadata: [:request_id]
 
 config :phoenix, :json_library, Jason
+
+config :ueberauth, Ueberauth,
+  base_path: "/auth",
+  providers: [
+    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]},
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]},
+    discord: {Ueberauth.Strategy.Discord, [default_scope: "identify email"]}
+  ]
+
+config :tetris, :client_url, "http://localhost:3000"
 
 import_config "#{config_env()}.exs"

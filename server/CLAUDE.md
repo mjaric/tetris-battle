@@ -3,12 +3,12 @@
 ## Prerequisites
 
 - Elixir ~> 1.18 with Erlang/OTP 27
-- No database required — all state is in-memory (GenServers, ETS)
+- PostgreSQL 18 (pgvector image used in dev/CI via Docker Compose)
 
 ## Development Commands
 
 ```bash
-mix setup                    # Install dependencies (alias for deps.get)
+mix setup                    # Install deps + create DB + migrate
 mix phx.server               # Start dev server on :4000
 mix test                     # Run all tests
 mix test test/tetris/board_test.exs        # Single test file
@@ -33,6 +33,13 @@ All deps are fetched from Hex (pinned in `mix.lock`). Key libraries:
 | Dependency | Purpose | Docs |
 |---|---|---|
 | phoenix ~> 1.8 | Web framework, channels, PubSub | https://hexdocs.pm/phoenix |
+| ecto_sql ~> 3.12 | Database wrapper and query language | https://hexdocs.pm/ecto_sql |
+| postgrex ~> 0.20 | PostgreSQL driver | https://hexdocs.pm/postgrex |
+| jose ~> 1.11 | JWT signing/verification (HS256) | https://hexdocs.pm/jose |
+| ueberauth ~> 0.10 | OAuth authentication framework | https://hexdocs.pm/ueberauth |
+| ueberauth_google ~> 0.12 | Google OAuth strategy | https://hexdocs.pm/ueberauth_google |
+| ueberauth_github ~> 0.8 | GitHub OAuth strategy | https://hexdocs.pm/ueberauth_github |
+| ueberauth_discord ~> 0.7 | Discord OAuth strategy | https://hexdocs.pm/ueberauth_discord |
 | jason ~> 1.4 | JSON encoding/decoding | https://hexdocs.pm/jason |
 | plug_cowboy ~> 2.8 | Cowboy HTTP adapter for Plug | https://hexdocs.pm/plug_cowboy |
 | corsica ~> 2.1 | CORS middleware | https://hexdocs.pm/corsica |
@@ -55,6 +62,16 @@ When adding a new dependency, use tidewave MCP tools to explore its API if the P
 
 ```
 lib/
+  platform/                # Cross-cutting platform concerns
+    accounts.ex            # User context (CRUD, upsert, search)
+    accounts/
+      user.ex              # User Ecto schema (binary_id PK)
+    auth/
+      token.ex             # JWT signing/verification (HS256)
+    repo.ex                # Ecto Repo (PostgreSQL)
+  platform_web/            # Platform HTTP controllers
+    controllers/
+      auth_controller.ex   # OAuth callbacks, guest login, token refresh
   tetris/                  # Pure game logic (no side effects)
     application.ex         # OTP application & supervision tree
     board.ex               # Board operations (place, clear, collision)
@@ -75,7 +92,7 @@ lib/
     channels/
       game_channel.ex      # game:{room_id} — input handling, state broadcast
       lobby_channel.ex     # lobby:main — room listing, creation, join
-      user_socket.ex       # WebSocket entry point
+      user_socket.ex       # WebSocket entry point (JWT auth)
     controllers/
       error_json.ex
       page_controller.ex
@@ -93,17 +110,21 @@ lib/
     bot.evolve.ex          # mix bot.evolve task
     bot.evolve.battle.ex   # mix bot.evolve.battle task
 test/
+  platform/                # Tests for accounts and auth
+  platform_web/controllers/# Auth controller tests
   tetris/                  # Unit tests for pure game logic
   tetris_game/             # Tests for OTP processes (rooms, lobby, bots)
   tetris_web/channels/     # Channel integration tests
   support/
     channel_case.ex        # Test helper for channel tests
+    conn_case.ex           # Test helper for controller tests
+    data_case.ex           # Test helper for Ecto tests
 config/
-  config.exs               # Shared config (PubSub, JSON library)
-  dev.exs                  # Dev: port 4000, no origin check
-  test.exs                 # Test: port 4002, server disabled
+  config.exs               # Shared config (PubSub, JSON, Ueberauth, Ecto)
+  dev.exs                  # Dev: port 4000, no origin check, local DB
+  test.exs                 # Test: port 4002, server disabled, sandbox pool
   prod.exs                 # Prod: host/port from env
-  runtime.exs              # Runtime config (SECRET_KEY_BASE, PHX_HOST, CORS_ORIGINS)
+  runtime.exs              # Runtime config (DATABASE_URL, OAuth creds, etc.)
 ```
 
 ## Architecture Notes
@@ -112,6 +133,7 @@ config/
 
 ```
 Tetris.Supervisor (one_for_one)
+├── Platform.Repo (Ecto — PostgreSQL)
 ├── TetrisWeb.Telemetry
 ├── Phoenix.PubSub (name: Tetris.PubSub)
 ├── Registry (TetrisGame.RoomRegistry, :unique)
@@ -122,6 +144,8 @@ Tetris.Supervisor (one_for_one)
 
 ### Module Boundaries
 
+- **`Platform.*`** — User accounts, authentication (Ecto schemas, JWT tokens). Database-backed.
+- **`PlatformWeb.*`** — HTTP controllers for auth (OAuth callbacks, guest login, token refresh).
 - **`Tetris.*`** — Pure functions, no GenServer calls, no side effects. Safe to call from anywhere.
 - **`TetrisGame.*`** — OTP processes. Interact via GenServer calls/casts.
 - **`TetrisWeb.*`** — Phoenix layer. Channels handle WebSocket messages, delegate to `TetrisGame`.
@@ -135,15 +159,43 @@ Each tick: drain input queue -> apply moves via `GameLogic` -> apply gravity -> 
 - `PlayerState.to_game_logic_map/1` and `from_game_logic_map/2` bridge the `%PlayerState{}` struct and the plain map used by `GameLogic`.
 - Room auth uses HMAC-SHA256 challenge-response (nonce-based, no plaintext passwords over wire).
 - All game state broadcasts go through `Phoenix.Channel.broadcast/3` on `game:{room_id}`.
+- User auth uses JWT (HS256, key derived from `secret_key_base`). WebSocket connections require a valid JWT token. JWT includes `sub` (user_id) and `name` (display_name) claims.
+- OAuth login via Ueberauth (Google, GitHub, Discord) redirects to `/auth/callback#token=JWT`.
+- Guest login via `POST /api/auth/guest` creates an anonymous user and returns a JWT.
+- Token refresh via `POST /api/auth/refresh` with `Authorization: Bearer <token>`.
 
 ## Configuration
 
-| Env Var | Used In | Purpose |
+### Dev (defaults in `dev.exs`)
+
+Dev requires a running PostgreSQL instance (Docker Compose recommended). Default DB credentials: `postgres`/`password`, database `tetris_dev`. OAuth provider credentials are optional in dev — set them as environment variables if you want to test OAuth login:
+
+| Env Var | Purpose |
+|---|---|
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GITHUB_CLIENT_ID` | GitHub OAuth client ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret |
+| `DISCORD_CLIENT_ID` | Discord OAuth client ID |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth client secret |
+
+### Prod (set in `runtime.exs`)
+
+| Env Var | Required | Purpose |
 |---|---|---|
-| `SECRET_KEY_BASE` | prod runtime | Phoenix secret (required) |
-| `PHX_HOST` | prod runtime | Public hostname (required) |
-| `PORT` | prod runtime | HTTP port (default: 4000) |
-| `CORS_ORIGINS` | prod runtime | Comma-separated allowed origins |
+| `DATABASE_URL` | yes | PostgreSQL connection URL |
+| `SECRET_KEY_BASE` | yes | Phoenix secret (also used to derive JWT signing key) |
+| `PHX_HOST` | yes | Public hostname |
+| `CLIENT_URL` | yes | Frontend URL for OAuth redirects |
+| `PORT` | no | HTTP port (default: 4000) |
+| `POOL_SIZE` | no | Database pool size (default: 10) |
+| `CORS_ORIGINS` | no | Comma-separated allowed origins |
+| `GOOGLE_CLIENT_ID` | no | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | no | Google OAuth client secret |
+| `GITHUB_CLIENT_ID` | no | GitHub OAuth client ID |
+| `GITHUB_CLIENT_SECRET` | no | GitHub OAuth client secret |
+| `DISCORD_CLIENT_ID` | no | Discord OAuth client ID |
+| `DISCORD_CLIENT_SECRET` | no | Discord OAuth client secret |
 
 ## Code Style
 

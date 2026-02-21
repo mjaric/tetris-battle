@@ -1,10 +1,10 @@
-import { createContext, useContext, useState, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { Socket, Channel } from 'phoenix';
 import { useSocket } from '../hooks/useSocket.ts';
+import { useAuthContext } from '../platform/auth/AuthProvider.tsx';
 
 interface GameContextValue {
   nickname: string | null;
-  setNickname: (name: string | null) => void;
   socket: Socket | null;
   connected: boolean;
   playerId: string | null;
@@ -14,13 +14,13 @@ interface GameContextValue {
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [nickname, setNickname] = useState<string | null>(null);
-  const { socket, connected, playerId, lobbyChannel } = useSocket(nickname);
+  const { token, user } = useAuthContext();
+  const { socket, connected, playerId, lobbyChannel } = useSocket(token);
+  const nickname = user?.displayName ?? null;
 
   const value = useMemo<GameContextValue>(
     () => ({
       nickname,
-      setNickname,
       socket,
       connected,
       playerId,
