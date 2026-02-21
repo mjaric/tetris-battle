@@ -9,7 +9,8 @@ defmodule TetrisWeb.ChannelCase do
     end
   end
 
-  setup _tags do
+  setup tags do
+    Platform.DataCase.setup_sandbox(tags)
     :ok
   end
 end
