@@ -4,7 +4,7 @@ import { useAuthContext } from './AuthProvider.tsx';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const { setToken } = useAuthContext();
+  const { setToken, setRegistrationToken } = useAuthContext();
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -18,13 +18,21 @@ export default function AuthCallback() {
       return;
     }
 
+    if (hash.startsWith('#registration_token=')) {
+      const regToken = hash.slice('#registration_token='.length);
+      setRegistrationToken(regToken);
+      window.history.replaceState(null, '', '/oauth/callback');
+      navigate('/register', { replace: true });
+      return;
+    }
+
     const error = params.get('error');
     if (error) {
       console.error('Auth error:', error);
     }
 
     navigate('/login', { replace: true });
-  }, [navigate, setToken]);
+  }, [navigate, setToken, setRegistrationToken]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg-primary">
