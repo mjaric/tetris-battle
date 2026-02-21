@@ -15,7 +15,7 @@ defmodule TetrisWeb.UserSocket do
         socket
         |> assign(:user_id, user.id)
         |> assign(:player_id, user.id)
-        |> assign(:nickname, user.display_name)
+        |> assign(:nickname, user.nickname || user.display_name)
 
       {:ok, socket}
     else

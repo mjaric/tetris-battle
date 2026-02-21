@@ -42,6 +42,48 @@ defmodule TetrisWeb.UserSocketTest do
                UserSocket.connect(%{}, %Phoenix.Socket{}, %{})
     end
 
+    test "uses nickname when available" do
+      {:ok, user} =
+        Accounts.register_user(%{
+          provider: "google",
+          provider_id: "socket_nick_test",
+          display_name: "Full Name",
+          nickname: "NickUser"
+        })
+
+      token = Token.sign(user.id)
+
+      assert {:ok, socket} =
+               UserSocket.connect(
+                 %{"token" => token},
+                 %Phoenix.Socket{},
+                 %{}
+               )
+
+      assert socket.assigns.nickname == "NickUser"
+    end
+
+    test "falls back to display_name for guests without nickname" do
+      {:ok, user} =
+        Accounts.create_user(%{
+          provider: "anonymous",
+          provider_id: "guest_socket_#{System.unique_integer([:positive])}",
+          display_name: "Guest_abc",
+          is_anonymous: true
+        })
+
+      token = Token.sign(user.id)
+
+      assert {:ok, socket} =
+               UserSocket.connect(
+                 %{"token" => token},
+                 %Phoenix.Socket{},
+                 %{}
+               )
+
+      assert socket.assigns.nickname == "Guest_abc"
+    end
+
     test "rejects token for deleted user" do
       token = Token.sign(Ecto.UUID.generate())
 
