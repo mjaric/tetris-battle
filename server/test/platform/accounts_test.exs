@@ -127,6 +127,99 @@ defmodule Platform.AccountsTest do
     end
   end
 
+  describe "registration_changeset/2" do
+    test "valid nickname" do
+      user = %User{}
+
+      changeset =
+        User.registration_changeset(user, %{
+          provider: "google",
+          provider_id: "reg_1",
+          display_name: "Test User",
+          nickname: "TestNick"
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :nickname) == "TestNick"
+    end
+
+    test "rejects nickname shorter than 3 chars" do
+      changeset =
+        User.registration_changeset(%User{}, %{
+          provider: "google",
+          provider_id: "reg_2",
+          display_name: "Test",
+          nickname: "ab"
+        })
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:nickname]
+    end
+
+    test "rejects nickname longer than 20 chars" do
+      changeset =
+        User.registration_changeset(%User{}, %{
+          provider: "google",
+          provider_id: "reg_3",
+          display_name: "Test",
+          nickname: String.duplicate("a", 21)
+        })
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:nickname]
+    end
+
+    test "rejects nickname starting with a digit" do
+      changeset =
+        User.registration_changeset(%User{}, %{
+          provider: "google",
+          provider_id: "reg_4",
+          display_name: "Test",
+          nickname: "1BadNick"
+        })
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:nickname]
+    end
+
+    test "rejects nickname with special characters" do
+      changeset =
+        User.registration_changeset(%User{}, %{
+          provider: "google",
+          provider_id: "reg_5",
+          display_name: "Test",
+          nickname: "bad-nick!"
+        })
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:nickname]
+    end
+
+    test "accepts nickname with underscores" do
+      changeset =
+        User.registration_changeset(%User{}, %{
+          provider: "google",
+          provider_id: "reg_6",
+          display_name: "Test",
+          nickname: "good_nick_1"
+        })
+
+      assert changeset.valid?
+    end
+
+    test "requires nickname" do
+      changeset =
+        User.registration_changeset(%User{}, %{
+          provider: "google",
+          provider_id: "reg_7",
+          display_name: "Test"
+        })
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:nickname]
+    end
+  end
+
   describe "search_users_by_name/2" do
     test "finds users by partial name match" do
       Accounts.create_user(%{
