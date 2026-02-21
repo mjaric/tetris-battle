@@ -3,6 +3,7 @@ import { AuthProvider, useAuthContext } from './platform/auth/AuthProvider.tsx';
 import { GameProvider, useGameContext } from './context/GameContext.tsx';
 import LoginScreen from './platform/auth/LoginScreen.tsx';
 import AuthCallback from './platform/auth/AuthCallback.tsx';
+import RegisterPage from './platform/auth/RegisterPage.tsx';
 import MainMenu from './components/MainMenu.tsx';
 import SoloGame from './components/SoloGame.tsx';
 import Lobby from './components/Lobby.tsx';
@@ -33,6 +34,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/oauth/callback" element={<AuthCallback />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route
         path="/"
         element={

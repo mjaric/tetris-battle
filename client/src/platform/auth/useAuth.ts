@@ -4,10 +4,11 @@ import { useAuthContext } from './AuthProvider.tsx';
 const API_URL = import.meta.env['VITE_API_URL'] ?? 'http://localhost:4000';
 
 interface UseAuthResult {
-  user: { id: string; displayName: string } | null;
+  user: { id: string; displayName: string; nickname: string | null } | null;
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
+  isGuest: boolean;
   loginWithGoogle: () => void;
   loginWithGithub: () => void;
   loginWithDiscord: () => void;
@@ -17,6 +18,8 @@ interface UseAuthResult {
 
 export function useAuth(): UseAuthResult {
   const { user, token, loading, isAuthenticated, setToken, logout } = useAuthContext();
+
+  const isGuest = isAuthenticated && user?.nickname == null;
 
   const loginWithGoogle = useCallback(() => {
     window.location.href = `${API_URL}/auth/google`;
@@ -46,6 +49,7 @@ export function useAuth(): UseAuthResult {
     token,
     loading,
     isAuthenticated,
+    isGuest,
     loginWithGoogle,
     loginWithGithub,
     loginWithDiscord,

@@ -1,15 +1,39 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '../platform/auth/useAuth.ts';
 
+const API_URL = import.meta.env['VITE_API_URL'] ?? 'http://localhost:4000';
+
 export default function MainMenu() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, isGuest, logout } = useAuth();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
       {user && (
         <div className="absolute top-6 right-6 flex items-center gap-3">
-          <span className="text-sm text-gray-400">{user.displayName}</span>
+          <span className="text-sm text-gray-400">{user.nickname ?? user.displayName}</span>
+          {isGuest && (
+            <div className="flex gap-2">
+              <a
+                href={`${API_URL}/auth/google`}
+                className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+              >
+                Link Google
+              </a>
+              <a
+                href={`${API_URL}/auth/github`}
+                className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+              >
+                Link GitHub
+              </a>
+              <a
+                href={`${API_URL}/auth/discord`}
+                className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+              >
+                Link Discord
+              </a>
+            </div>
+          )}
           <button
             onClick={logout}
             className="cursor-pointer rounded border border-border px-3 py-1 text-xs text-gray-500 hover:text-white"
@@ -19,7 +43,7 @@ export default function MainMenu() {
         </div>
       )}
 
-      <h1 className="mb-12 text-5xl font-extrabold uppercase tracking-widest bg-gradient-to-br from-accent to-cyan bg-clip-text text-transparent">
+      <h1 className="mb-12 bg-gradient-to-br from-accent to-cyan bg-clip-text text-5xl font-extrabold uppercase tracking-widest text-transparent">
         Tetris
       </h1>
       <button

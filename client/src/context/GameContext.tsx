@@ -16,7 +16,7 @@ const GameContext = createContext<GameContextValue | null>(null);
 export function GameProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuthContext();
   const { socket, connected, playerId, lobbyChannel } = useSocket(token);
-  const nickname = user?.displayName ?? null;
+  const nickname = user?.nickname ?? user?.displayName ?? null;
 
   const value = useMemo<GameContextValue>(
     () => ({
