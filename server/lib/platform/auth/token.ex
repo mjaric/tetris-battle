@@ -18,13 +18,14 @@ defmodule Platform.Auth.Token do
   @spec sign(String.t(), keyword()) :: String.t()
   def sign(user_id, opts \\ []) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
+    extra = Keyword.get(opts, :claims, %{})
     now = System.system_time(:second)
 
-    claims = %{
-      "sub" => user_id,
-      "iat" => now,
-      "exp" => now + ttl
-    }
+    claims =
+      Map.merge(
+        %{"sub" => user_id, "iat" => now, "exp" => now + ttl},
+        extra
+      )
 
     jwk = signing_key()
     jws = JOSE.JWS.from_map(%{"alg" => "HS256"})

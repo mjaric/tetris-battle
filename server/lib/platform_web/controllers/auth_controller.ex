@@ -19,7 +19,7 @@ defmodule PlatformWeb.AuthController do
 
     case Accounts.find_or_create_user(user_attrs) do
       {:ok, user} ->
-        token = Token.sign(user.id)
+        token = Token.sign(user.id, claims: %{"name" => user.display_name})
         client_url = Application.get_env(:tetris, :client_url)
 
         redirect(conn,
@@ -58,7 +58,7 @@ defmodule PlatformWeb.AuthController do
            is_anonymous: true
          }) do
       {:ok, user} ->
-        token = Token.sign(user.id)
+        token = Token.sign(user.id, claims: %{"name" => user.display_name})
 
         json(conn, %{
           token: token,
@@ -76,8 +76,8 @@ defmodule PlatformWeb.AuthController do
     with ["Bearer " <> token] <-
            get_req_header(conn, "authorization"),
          {:ok, user_id} <- Token.verify(token),
-         %Accounts.User{} <- Accounts.get_user(user_id) do
-      new_token = Token.sign(user_id)
+         %Accounts.User{} = user <- Accounts.get_user(user_id) do
+      new_token = Token.sign(user_id, claims: %{"name" => user.display_name})
       json(conn, %{token: new_token})
     else
       _ ->

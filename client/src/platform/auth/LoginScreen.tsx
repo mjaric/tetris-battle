@@ -1,7 +1,18 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from './useAuth.ts';
 
 export default function LoginScreen() {
-  const { loginWithGoogle, loginWithGithub, loginWithDiscord, loginAsGuest } = useAuth();
+  const { loginWithGoogle, loginWithGithub, loginWithDiscord, loginAsGuest, isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  if (loading) return null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
