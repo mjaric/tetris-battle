@@ -267,4 +267,122 @@ defmodule Platform.AccountsTest do
       assert Accounts.search_users_by_name("a_b") == []
     end
   end
+
+  describe "register_user/1" do
+    test "creates a user with nickname" do
+      attrs = %{
+        provider: "google",
+        provider_id: "reg_new_1",
+        display_name: "New User",
+        email: "new@example.com",
+        nickname: "NewPlayer"
+      }
+
+      assert {:ok, %User{} = user} = Accounts.register_user(attrs)
+      assert user.nickname == "NewPlayer"
+      assert user.display_name == "New User"
+      assert user.is_anonymous == false
+    end
+
+    test "fails with duplicate nickname" do
+      base = %{
+        provider: "google",
+        provider_id: "reg_dup_1",
+        display_name: "User1",
+        nickname: "TakenNick"
+      }
+
+      assert {:ok, _} = Accounts.register_user(base)
+
+      assert {:error, changeset} =
+               Accounts.register_user(%{
+                 base
+                 | provider_id: "reg_dup_2",
+                   display_name: "User2"
+               })
+
+      assert errors_on(changeset)[:nickname]
+    end
+
+    test "fails with invalid nickname format" do
+      assert {:error, changeset} =
+               Accounts.register_user(%{
+                 provider: "google",
+                 provider_id: "reg_bad",
+                 display_name: "Bad",
+                 nickname: "1bad"
+               })
+
+      assert errors_on(changeset)[:nickname]
+    end
+  end
+
+  describe "register_guest_upgrade/2" do
+    test "upgrades anonymous user with nickname" do
+      {:ok, anon} =
+        Accounts.create_user(%{
+          provider: "anonymous",
+          provider_id: Ecto.UUID.generate(),
+          display_name: "Guest_abc",
+          is_anonymous: true
+        })
+
+      upgrade_attrs = %{
+        provider: "google",
+        provider_id: "google_upgrade_1",
+        display_name: "Real Name",
+        email: "real@example.com",
+        nickname: "RealPlayer",
+        is_anonymous: false
+      }
+
+      assert {:ok, upgraded} =
+               Accounts.register_guest_upgrade(anon, upgrade_attrs)
+
+      assert upgraded.id == anon.id
+      assert upgraded.nickname == "RealPlayer"
+      assert upgraded.provider == "google"
+      assert upgraded.is_anonymous == false
+    end
+
+    test "rejects upgrade for non-anonymous user" do
+      {:ok, user} =
+        Accounts.register_user(%{
+          provider: "google",
+          provider_id: "not_anon_1",
+          display_name: "NotAnon",
+          nickname: "NotAnon"
+        })
+
+      assert {:error, :not_anonymous} =
+               Accounts.register_guest_upgrade(user, %{
+                 nickname: "NewNick"
+               })
+    end
+  end
+
+  describe "nickname_available?/1" do
+    test "returns true for available nickname" do
+      assert Accounts.nickname_available?("FreshNick")
+    end
+
+    test "returns false for taken nickname" do
+      Accounts.register_user(%{
+        provider: "google",
+        provider_id: "taken_1",
+        display_name: "Taken",
+        nickname: "TakenName"
+      })
+
+      refute Accounts.nickname_available?("TakenName")
+    end
+
+    test "returns false for invalid format" do
+      refute Accounts.nickname_available?("1bad")
+    end
+
+    test "returns false for too short" do
+      refute Accounts.nickname_available?("ab")
+    end
+  end
 end
