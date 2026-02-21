@@ -6,6 +6,15 @@ const TOKEN_KEY = 'tetris_auth_token';
 interface AuthUser {
   id: string;
   displayName: string;
+  nickname: string | null;
+}
+
+interface RegistrationData {
+  provider: string;
+  providerId: string;
+  name: string;
+  email: string | null;
+  avatarUrl: string | null;
 }
 
 interface AuthContextValue {
@@ -13,7 +22,10 @@ interface AuthContextValue {
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
+  registrationToken: string | null;
+  registrationData: RegistrationData | null;
   setToken: (token: string | null) => void;
+  setRegistrationToken: (token: string | null) => void;
   logout: () => void;
   refreshToken: () => Promise<void>;
 }
@@ -56,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [registrationToken, setRegTokenState] = useState<string | null>(null);
+  const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
 
   const setToken = useCallback((newToken: string | null) => {
     if (newToken) {
@@ -88,6 +102,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token, setToken, logout]);
 
+  const setRegistrationToken = useCallback((regToken: string | null) => {
+    setRegTokenState(regToken);
+    if (regToken) {
+      const payload = decodeJwtPayload(regToken);
+      if (payload && payload['type'] === 'registration') {
+        setRegistrationData({
+          provider: payload['provider'] as string,
+          providerId: payload['provider_id'] as string,
+          name: (payload['name'] as string) ?? '',
+          email: (payload['email'] as string) ?? null,
+          avatarUrl: (payload['avatar_url'] as string) ?? null,
+        });
+      }
+    } else {
+      setRegistrationData(null);
+    }
+  }, []);
+
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
     if (stored && !isTokenExpired(stored)) {
@@ -109,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({
         id: payload['sub'],
         displayName: (payload['name'] as string) ?? 'Player',
+        nickname: (payload['nickname'] as string) ?? null,
       });
     }
   }, [token]);
@@ -119,11 +152,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       loading,
       isAuthenticated: !!token && !!user,
+      registrationToken,
+      registrationData,
       setToken,
+      setRegistrationToken,
       logout,
       refreshToken,
     }),
-    [user, token, loading, setToken, logout, refreshToken]
+    [user, token, loading, registrationToken, registrationData, setToken, setRegistrationToken, logout, refreshToken]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
