@@ -37,7 +37,12 @@ export default function GlassCard({
 
   return (
     <div
-      className={[VARIANT_CLASS[variant], PADDING_CLASS[padding], onClick ? 'cursor-pointer transition-all duration-150 hover:border-accent/30' : '', className]
+      className={[
+        VARIANT_CLASS[variant],
+        PADDING_CLASS[padding],
+        onClick ? 'cursor-pointer transition-all duration-150 hover:border-accent/30' : '',
+        className,
+      ]
         .filter(Boolean)
         .join(' ')}
       style={glowStyle}

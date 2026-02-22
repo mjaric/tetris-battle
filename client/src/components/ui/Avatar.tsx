@@ -29,9 +29,11 @@ export default function Avatar({ name, size = 'md', status, className = '' }: Av
   return (
     <div className={`relative inline-flex ${className}`}>
       <div
-        className={[SIZE_CLASS[size], 'flex items-center justify-center', 'rounded-full font-display font-bold text-white'].join(
-          ' '
-        )}
+        className={[
+          SIZE_CLASS[size],
+          'flex items-center justify-center',
+          'rounded-full font-display font-bold text-white',
+        ].join(' ')}
         style={{
           background: `linear-gradient(135deg, ${color}, ${color}88)`,
         }}

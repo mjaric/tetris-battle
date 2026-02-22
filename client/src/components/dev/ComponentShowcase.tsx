@@ -1,14 +1,6 @@
 import { GlassCard, Button, Input, Badge, Avatar, Stat, Divider, PageTransition } from '../ui/index.ts';
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
     <section className="mb-12">
       <h2 className="mb-1 font-display text-2xl font-bold text-text-primary">{title}</h2>
@@ -25,7 +17,10 @@ export default function ComponentShowcase() {
       <p className="mb-10 text-text-muted">All reusable UI primitives with variants</p>
 
       {/* Typography */}
-      <Section title="Typography" description="Font families: Space Grotesk (display), Inter (body), JetBrains Mono (mono)">
+      <Section
+        title="Typography"
+        description="Font families: Space Grotesk (display), Inter (body), JetBrains Mono (mono)"
+      >
         <div className="flex flex-col gap-3">
           <span className="font-display text-4xl font-bold">Space Grotesk Display</span>
           <span className="font-body text-lg">Inter Body Text — The quick brown fox jumps</span>

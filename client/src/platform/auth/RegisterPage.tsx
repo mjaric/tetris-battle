@@ -74,7 +74,7 @@ export default function RegisterPage() {
         void checkNickname(value);
       }, DEBOUNCE_MS);
     },
-    [checkNickname],
+    [checkNickname]
   );
 
   const handleSubmit = useCallback(
@@ -117,7 +117,7 @@ export default function RegisterPage() {
               Object.values(data.errors ?? {})
                 .flat()
                 .join(', ') ??
-              'Registration failed',
+              'Registration failed'
           );
           setSubmitting(false);
         }
@@ -126,7 +126,7 @@ export default function RegisterPage() {
         setSubmitting(false);
       }
     },
-    [registrationToken, nickname, displayName, token, nicknameStatus, setToken, setRegistrationToken, navigate],
+    [registrationToken, nickname, displayName, token, nicknameStatus, setToken, setRegistrationToken, navigate]
   );
 
   if (!registrationToken || !registrationData) {
@@ -138,7 +138,11 @@ export default function RegisterPage() {
   const nicknameStatusBadge = () => {
     switch (nicknameStatus) {
       case 'checking':
-        return <Badge variant="status" color="#888">Checking...</Badge>;
+        return (
+          <Badge variant="status" color="#888">
+            Checking...
+          </Badge>
+        );
       case 'available':
         return <Badge variant="status">Available</Badge>;
       case 'taken':
@@ -178,7 +182,11 @@ export default function RegisterPage() {
                 onChange={(e) => handleNicknameChange(e.target.value)}
                 placeholder="Pick a unique handle"
                 maxLength={20}
-                error={nicknameStatus === 'invalid' ? 'Must start with a letter, 3-20 chars, letters/digits/underscores' : undefined}
+                error={
+                  nicknameStatus === 'invalid'
+                    ? 'Must start with a letter, 3-20 chars, letters/digits/underscores'
+                    : undefined
+                }
               />
               <div className="mt-2 flex items-center gap-2">
                 {nicknameStatusBadge()}
