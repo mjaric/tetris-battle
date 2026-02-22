@@ -7,6 +7,7 @@ import { soundManager } from '../audio/SoundManager.ts';
 import AudioControls from './AudioControls.tsx';
 import Board from './Board.tsx';
 import Sidebar from './Sidebar.tsx';
+import { Button, PageTransition } from './ui/index.ts';
 import type { ReactNode } from 'react';
 
 function Overlay({
@@ -19,15 +20,12 @@ function Overlay({
   actionLabel?: string;
 }) {
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded bg-black/75">
+    <div className="glass absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-black/60">
       {children}
       {onAction && actionLabel && (
-        <button
-          onClick={onAction}
-          className="cursor-pointer rounded-lg border-none bg-accent px-8 py-3 text-base font-bold uppercase tracking-wide text-white"
-        >
+        <Button variant="primary" size="lg" onClick={onAction}>
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -50,8 +48,8 @@ export default function SoloGame() {
   const nextPieceObj = nextPiece ? { shape: nextPiece.shape, color: nextPiece.color } : null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
-      <h1 className="mb-5 text-4xl font-extrabold uppercase tracking-widest bg-gradient-to-br from-accent to-cyan bg-clip-text text-transparent">
+    <PageTransition className="flex min-h-screen flex-col items-center justify-center">
+      <h1 className="mb-5 bg-gradient-to-br from-accent to-cyan bg-clip-text font-display text-4xl font-bold uppercase tracking-widest text-transparent">
         Tetris
       </h1>
       <div className="flex items-start">
@@ -59,30 +57,27 @@ export default function SoloGame() {
           <Board board={board} events={events} dangerLevel={dangerLevel} />
           {!gameStarted && (
             <Overlay onAction={startGame} actionLabel="Start Game">
-              <div className="mb-4 text-lg text-gray-400">Press Start to Play</div>
+              <div className="mb-4 text-lg text-text-muted">Press Start to Play</div>
             </Overlay>
           )}
           {gameOver && (
             <Overlay onAction={startGame} actionLabel="Play Again">
-              <div className="mb-2 text-2xl font-bold text-red">Game Over</div>
-              <div className="mb-4 text-base text-gray-400">Score: {score.toLocaleString()}</div>
+              <div className="mb-2 font-display text-2xl font-bold text-red">Game Over</div>
+              <div className="mb-4 text-base text-text-muted">Score: {score.toLocaleString()}</div>
             </Overlay>
           )}
           {isPaused && !gameOver && (
             <Overlay onAction={togglePause} actionLabel="Resume">
-              <div className="mb-4 text-2xl font-bold text-amber">Paused</div>
+              <div className="mb-4 font-display text-2xl font-bold text-amber">Paused</div>
             </Overlay>
           )}
         </div>
         <Sidebar score={score} lines={lines} level={level} nextPiece={nextPieceObj} />
       </div>
-      <button
-        onClick={() => navigate('/')}
-        className="mt-5 cursor-pointer rounded-md border-none bg-border px-5 py-2 text-sm text-gray-400"
-      >
+      <Button variant="ghost" size="sm" className="mt-5" onClick={() => navigate('/')}>
         Back to Menu
-      </button>
+      </Button>
       {gameStarted && <AudioControls />}
-    </div>
+    </PageTransition>
   );
 }

@@ -1,5 +1,5 @@
 import NextPiece from './NextPiece.tsx';
-import StatBox from './StatBox.tsx';
+import { GlassCard, Stat, Divider } from './ui/index.ts';
 
 interface SidebarProps {
   score: number;
@@ -10,15 +10,18 @@ interface SidebarProps {
 
 export default function Sidebar({ score, lines, level, nextPiece }: SidebarProps) {
   return (
-    <div className="ml-6 min-w-35 rounded-lg border border-border bg-bg-secondary p-5">
+    <GlassCard variant="elevated" padding="md" className="ml-6 min-w-35">
       <NextPiece piece={nextPiece} />
-      <StatBox label="Score" value={score} />
-      <StatBox label="Lines" value={lines} />
-      <StatBox label="Level" value={level} />
-
-      <div className="mt-6 border-t border-border pt-4">
-        <h3 className="m-0 mb-2.5 text-xs uppercase tracking-widest text-gray-400">Controls</h3>
-        <div className="text-xs leading-7 text-gray-600">
+      <Divider className="my-3" />
+      <div className="space-y-3">
+        <Stat label="Score" value={score.toLocaleString()} />
+        <Stat label="Lines" value={lines} />
+        <Stat label="Level" value={level} />
+      </div>
+      <Divider className="my-3" />
+      <div>
+        <h3 className="mb-2.5 text-xs uppercase tracking-widest text-text-muted">Controls</h3>
+        <div className="text-xs leading-7 text-text-muted">
           <div>
             <Kbd>&larr; &rarr;</Kbd> Move
           </div>
@@ -36,13 +39,13 @@ export default function Sidebar({ score, lines, level, nextPiece }: SidebarProps
           </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="mr-1.5 inline-block rounded border border-gray-700 bg-bg-elevated px-1.5 py-px font-mono text-xs text-gray-400">
+    <kbd className="mr-1.5 inline-block rounded border border-glass-border bg-bg-elevated px-1.5 py-px font-mono text-xs text-text-muted">
       {children}
     </kbd>
   );
