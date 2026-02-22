@@ -1,43 +1,95 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg-primary: #0a0a1a;
-  --color-bg-secondary: #16162a;
-  --color-bg-tertiary: #1a1a2e;
+  /* Backgrounds */
+  --color-bg-primary: #07071a;
+  --color-bg-secondary: rgba(20, 20, 50, 0.6);
+  --color-bg-tertiary: rgba(30, 30, 60, 0.4);
   --color-bg-cell: #0f0f23;
   --color-bg-elevated: #2a2a4a;
-  --color-accent: #6c63ff;
-  --color-cyan: #00f0f0;
+
+  /* Accents */
+  --color-accent: #7c6cff;
+  --color-cyan: #00e0e0;
   --color-green: #00b894;
   --color-amber: #ffa502;
   --color-red: #ff4757;
+
+  /* Medals */
   --color-gold: #ffd700;
   --color-silver: #c0c0c0;
   --color-bronze: #cd7f32;
+
+  /* Text */
+  --color-text-primary: #e8e8f0;
+  --color-text-muted: rgba(255, 255, 255, 0.5);
   --color-muted: #888;
+
+  /* Glass */
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-highlight: rgba(255, 255, 255, 0.04);
   --color-border: #333;
+
+  /* Fonts */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 body {
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg-primary);
-  color: #fff;
+  color: var(--color-text-primary);
   overflow: hidden;
+}
+
+/* === Glass Utilities === */
+
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 1rem;
+}
+
+.glass-elevated {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px var(--color-glass-highlight) inset;
+}
+
+.glass-subtle {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.5rem;
+}
+
+/* === Page Transition === */
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: page-enter 200ms ease-out both;
 }
 
 @keyframes pulse-border {
@@ -288,5 +340,21 @@ body {
   .anim-garbage-sent,
   .anim-garbage-meter-pulse {
     animation: none !important;
+  }
+
+  .page-enter {
+    animation: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glass,
+  .glass-elevated,
+  .glass-subtle {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  body {
+    color: #fff;
   }
 }
