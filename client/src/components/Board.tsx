@@ -99,7 +99,7 @@ export default function Board({ board, pendingGarbage = 0, events = [], dangerLe
             gridTemplateColumns: `repeat(${String(BOARD_WIDTH)}, ${String(CELL_SIZE)}px)`,
             gridTemplateRows: `repeat(${String(BOARD_HEIGHT)}, ${String(CELL_SIZE)}px)`,
           }}
-          className={`rounded border-3 border-accent bg-bg-cell shadow-[0_0_20px_rgba(108,99,255,0.3)] ${boardClassName}`}
+          className={`rounded-lg border border-glass-border bg-bg-cell shadow-[0_0_20px_rgba(124,108,255,0.15),inset_0_0_0_1px_rgba(255,255,255,0.04)] ${boardClassName}`}
         >
           {board.map((row, y) => row.map((cell, x) => <Cell key={`${String(y)}-${String(x)}`} color={cell} />))}
         </div>
