@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useGameContext } from '../context/GameContext.tsx';
+import { GlassCard, Button, Input, Badge, PageTransition } from './ui/index.ts';
 import type { RoomInfo } from '../types.ts';
 
 interface NewRoom {
@@ -60,72 +61,72 @@ export default function Lobby() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-bg-primary p-10">
-      <h2 className="mb-6 text-2xl font-bold">Lobby</h2>
-
-      <div className="mb-6 flex gap-3">
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="cursor-pointer rounded-lg border-none bg-accent px-6 py-2.5 text-sm font-bold text-white"
-        >
-          Create Room
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          className="cursor-pointer rounded-lg border-none bg-border px-6 py-2.5 text-sm font-bold text-white"
-        >
-          Back
-        </button>
-      </div>
-
-      {error && <div className="mb-4 text-sm text-red">{error}</div>}
-
-      {showCreate && (
-        <div className="mb-6 rounded-lg border border-border bg-bg-secondary p-5">
-          <input
-            placeholder="Room name"
-            value={newRoom.name}
-            onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
-            className="block w-full rounded-md border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-white outline-none"
-          />
-          <select
-            value={newRoom.max_players}
-            onChange={(e) =>
-              setNewRoom({
-                ...newRoom,
-                max_players: parseInt(e.target.value, 10),
-              })
-            }
-            className="mt-2 block w-full rounded-md border border-border bg-bg-tertiary px-3.5 py-2.5 text-sm text-white outline-none"
-          >
-            <option value={2}>2 players</option>
-            <option value={3}>3 players</option>
-            <option value={4}>4 players</option>
-          </select>
-          <button
-            onClick={handleCreate}
-            className="mt-3 w-full cursor-pointer rounded-lg border-none bg-accent px-6 py-2.5 text-sm font-bold text-white"
-          >
-            Create
-          </button>
-        </div>
-      )}
-
-      <div className="w-full max-w-lg">
-        {rooms.length === 0 && <div className="text-center text-gray-600">No rooms yet</div>}
-        {rooms.map((room) => (
-          <div
-            key={room.room_id}
-            onClick={() => handleJoin(room)}
-            className="mb-2 flex cursor-pointer items-center justify-between rounded-lg border border-border bg-bg-secondary px-4 py-3"
-          >
-            <span className="font-bold">{room.name}</span>
-            <span className="text-muted">
-              {room.player_count}/{room.max_players}
-            </span>
+    <PageTransition className="min-h-screen p-8">
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-display text-2xl font-bold text-text-primary">Lobby</h2>
+          <div className="flex gap-3">
+            <Button variant="primary" size="sm" onClick={() => setShowCreate(!showCreate)}>
+              {showCreate ? 'Cancel' : 'Create Room'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              Back
+            </Button>
           </div>
-        ))}
+        </div>
+
+        {error && <p className="mb-4 text-sm text-red">{error}</p>}
+
+        {showCreate && (
+          <GlassCard variant="elevated" padding="md" className="mb-6">
+            <div className="space-y-3">
+              <Input
+                label="Room Name"
+                placeholder="Room name"
+                value={newRoom.name}
+                onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="font-body text-sm text-text-muted">Max Players</label>
+                <select
+                  value={newRoom.max_players}
+                  onChange={(e) =>
+                    setNewRoom({
+                      ...newRoom,
+                      max_players: parseInt(e.target.value, 10),
+                    })
+                  }
+                  className="glass-subtle w-full px-3 py-2.5 text-text-primary focus:border-accent/50 focus:outline-none"
+                >
+                  <option value={2}>2 players</option>
+                  <option value={3}>3 players</option>
+                  <option value={4}>4 players</option>
+                </select>
+              </div>
+              <Button variant="primary" fullWidth onClick={handleCreate}>
+                Create
+              </Button>
+            </div>
+          </GlassCard>
+        )}
+
+        <div className="space-y-2">
+          {rooms.length === 0 && <p className="py-8 text-center text-text-muted">No rooms yet — create one!</p>}
+          {rooms.map((room) => (
+            <GlassCard
+              key={room.room_id}
+              padding="sm"
+              onClick={() => handleJoin(room)}
+              className="flex items-center justify-between"
+            >
+              <span className="font-display font-bold text-text-primary">{room.name}</span>
+              <Badge variant="player">
+                {room.player_count}/{room.max_players}
+              </Badge>
+            </GlassCard>
+          ))}
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
