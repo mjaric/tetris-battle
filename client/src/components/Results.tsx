@@ -1,10 +1,8 @@
 import type { GameState, PlayerBroadcast } from '../types.ts';
+import { GlassCard, Button, Badge, Avatar, Stat, PageTransition } from './ui/index.ts';
 
-const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32', '#666'];
-
-function getMedalColor(index: number): string {
-  return MEDAL_COLORS[index] ?? '#666';
-}
+const MEDAL_LABELS = ['1st', '2nd', '3rd', '4th'];
+const MEDAL_COLORS = ['var(--color-gold)', 'var(--color-silver)', 'var(--color-bronze)', 'var(--color-muted)'];
 
 interface ResultsProps {
   gameState: GameState | null;
@@ -21,43 +19,45 @@ export default function Results({ gameState, onBack }: ResultsProps) {
   const ranking = [...alive, ...eliminatedOrder.slice().reverse()];
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
-      <h2 className="mb-2 text-3xl font-bold text-amber">Game Over</h2>
-      <h3 className="mb-6 text-muted">Rankings</h3>
+    <PageTransition className="flex min-h-screen flex-col items-center justify-center p-8">
+      <h2 className="mb-2 font-display text-3xl font-bold text-amber">Game Over</h2>
+      <p className="mb-8 text-text-muted">Rankings</p>
 
-      <div className="mb-8 min-w-100">
+      <div className="mb-8 w-full max-w-lg space-y-3">
         {ranking.map((pid, idx) => {
           const p: PlayerBroadcast | undefined = players[pid];
           if (!p) return null;
-          const medal = getMedalColor(idx);
+          const isWinner = idx === 0;
+          const medalColor = MEDAL_COLORS[idx] ?? 'var(--color-muted)';
+
           return (
-            <div
+            <GlassCard
               key={pid}
-              className="mb-2 flex items-center justify-between rounded-lg bg-bg-secondary px-4 py-3"
-              style={{ border: `2px solid ${medal}` }}
+              variant={isWinner ? 'elevated' : 'default'}
+              padding="md"
+              glow={isWinner ? 'rgba(255, 215, 0, 0.2)' : undefined}
+              className="flex items-center justify-between"
             >
-              <div>
-                <span className="mr-3 font-bold" style={{ color: medal }}>
-                  #{idx + 1}
-                </span>
-                <span className="font-bold">{p.nickname}</span>
+              <div className="flex items-center gap-3">
+                <Badge variant="rank" color={medalColor}>
+                  {MEDAL_LABELS[idx] ?? `#${idx + 1}`}
+                </Badge>
+                <Avatar name={p.nickname} size="sm" />
+                <span className="font-display font-bold text-text-primary">{p.nickname}</span>
               </div>
-              <div className="text-sm text-muted">
-                Score: {(p.score ?? 0).toLocaleString()} | Lines: {p.lines ?? 0} | Lvl: {p.level ?? 1}
+              <div className="flex items-center gap-4">
+                <Stat label="Score" value={(p.score ?? 0).toLocaleString()} />
+                <Stat label="Lines" value={p.lines ?? 0} />
+                <Stat label="Level" value={p.level ?? 1} />
               </div>
-            </div>
+            </GlassCard>
           );
         })}
       </div>
 
-      <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="cursor-pointer rounded-lg border-none bg-border px-6 py-3 text-sm text-gray-400"
-        >
-          Back to Lobby
-        </button>
-      </div>
-    </div>
+      <Button variant="ghost" onClick={onBack}>
+        Back to Lobby
+      </Button>
+    </PageTransition>
   );
 }
