@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TETROMINOES } from '../constants.ts';
 import type { GameState } from '../types.ts';
 import { calculateCellSize } from '../utils/calculateCellSize.ts';
 import { useGameEvents } from '../hooks/useGameEvents.ts';
+import { useRenderStats } from '../hooks/useRenderStats.ts';
 import { computeDangerLevel } from '../utils/dangerZone.ts';
 import PlayerBoard from './PlayerBoard.tsx';
 
@@ -21,25 +22,32 @@ function resolveGlowLevel(playerId: string, myPlayerId: string, targetId: string
   return 'other';
 }
 
-function useViewportWidth(): number {
-  const [width, setWidth] = useState(window.innerWidth);
+function useViewportSize(): { width: number; height: number } {
+  const [size, setSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
   useEffect(() => {
     function handleResize() {
-      setWidth(window.innerWidth);
+      setSize({ width: window.innerWidth, height: window.innerHeight });
     }
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return width;
+  return size;
 }
 
 export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoardProps) {
-  const viewportWidth = useViewportWidth();
+  const { width: viewportWidth, height: viewportHeight } = useViewportSize();
   const myState = gameState.players[myPlayerId];
   const { myEvents, opponentEvents } = useGameEvents(gameState, myPlayerId);
   const dangerLevel = myState ? computeDangerLevel(myState.board) : ('none' as const);
+  const tetroDef = myState?.next_piece ? TETROMINOES[myState.next_piece] : undefined;
+  const nextPieceObj = useMemo(() => (tetroDef ? { shape: tetroDef.shape, color: tetroDef.color } : null), [tetroDef]);
+  const playerIds = Object.keys(gameState.players);
+  useRenderStats('MultiBoard', playerIds.length);
   if (!myState) return null;
 
   const sortedPlayers = Object.entries(gameState.players).sort(([a], [b]) => {
@@ -48,13 +56,10 @@ export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoar
     return a.localeCompare(b);
   });
   const playerCount = sortedPlayers.length;
-  const cellSize = calculateCellSize(playerCount, viewportWidth);
+  const cellSize = calculateCellSize(playerCount, viewportWidth, viewportHeight);
   const gap = Math.max(24, Math.round(cellSize * 1.2));
 
   const targetNickname = myState.target ? gameState.players[myState.target]?.nickname : undefined;
-
-  const tetroDef = myState.next_piece ? TETROMINOES[myState.next_piece] : undefined;
-  const nextPieceObj = tetroDef ? { shape: tetroDef.shape, color: tetroDef.color } : null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">

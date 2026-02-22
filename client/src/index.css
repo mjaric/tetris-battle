@@ -217,20 +217,20 @@ body {
 @keyframes danger-pulse {
   0%,
   100% {
-    background-color: rgba(255, 71, 87, 0);
+    opacity: 0;
   }
   50% {
-    background-color: rgba(255, 71, 87, 0.1);
+    opacity: 1;
   }
 }
 
 @keyframes danger-pulse-fast {
   0%,
   100% {
-    background-color: rgba(255, 71, 87, 0);
+    opacity: 0;
   }
   50% {
-    background-color: rgba(255, 71, 87, 0.25);
+    opacity: 1;
   }
 }
 
@@ -306,9 +306,11 @@ body {
 }
 .anim-danger-pulse {
   animation: danger-pulse 1500ms ease-in-out infinite;
+  will-change: opacity;
 }
 .anim-danger-pulse-fast {
   animation: danger-pulse-fast 500ms ease-in-out infinite;
+  will-change: opacity;
 }
 .anim-elim-flash {
   animation: elim-flash 300ms ease-out forwards;

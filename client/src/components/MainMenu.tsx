@@ -64,6 +64,10 @@ export default function MainMenu() {
           </Button>
         </GlassCard>
       </div>
+
+      <Button variant="ghost" size="sm" className="mt-6" onClick={() => navigate('/history')}>
+        Match History
+      </Button>
     </PageTransition>
   );
 }

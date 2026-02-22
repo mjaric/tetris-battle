@@ -6,6 +6,7 @@ import AuthCallback from './platform/auth/AuthCallback.tsx';
 import RegisterPage from './platform/auth/RegisterPage.tsx';
 import MainMenu from './components/MainMenu.tsx';
 import SoloGame from './components/SoloGame.tsx';
+import MatchHistory from './platform/history/MatchHistory.tsx';
 import Lobby from './components/Lobby.tsx';
 import GameSession from './components/GameSession.tsx';
 import AppShell from './components/ui/AppShell.tsx';
@@ -45,6 +46,16 @@ function AppRoutes() {
           <RequireAuth>
             <AppShell>
               <MainMenu />
+            </AppShell>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          <RequireAuth>
+            <AppShell>
+              <MatchHistory />
             </AppShell>
           </RequireAuth>
         }

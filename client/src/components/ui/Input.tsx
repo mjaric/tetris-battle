@@ -2,7 +2,7 @@ import type { InputHTMLAttributes, ReactNode } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: ReactNode;
-  error?: string;
+  error?: string | undefined;
   label?: string;
 }
 

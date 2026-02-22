@@ -56,8 +56,9 @@ match_players (
 )
 ```
 
-No `replay_events` table. No `key_moments` table. JetStream is the event
-store.
+- No `replay_events` table. 
+- No `key_moments` table.
+- JetStream is the event store.
 
 ### Design notes
 

@@ -1,0 +1,26 @@
+services:
+  db:
+    image: pgvector/pgvector:pg18 # Official image for Postgres 18 with pgvector
+    container_name: dibsbit_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dibsbit_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: dibsbit_nats
+    restart: unless-stopped
+    command: ["--jetstream", "--store_dir", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    tmpfs:
+      - /data

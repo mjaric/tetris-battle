@@ -46,7 +46,8 @@ defmodule Tetris.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_google, "~> 0.12"},
       {:ueberauth_github, "~> 0.8"},
-      {:ueberauth_discord, "~> 0.7"}
+      {:ueberauth_discord, "~> 0.7"},
+      {:gnat, "~> 1.13"}
     ]
   end
 

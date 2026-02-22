@@ -31,7 +31,8 @@ defmodule TetrisGame.GameRoom do
     :tick,
     :tick_timer,
     :bot_ids,
-    :bot_pids
+    :bot_pids,
+    :started_at
   ]
 
   @type t :: %__MODULE__{
@@ -46,7 +47,8 @@ defmodule TetrisGame.GameRoom do
           tick: non_neg_integer(),
           tick_timer: reference() | nil,
           bot_ids: MapSet.t(),
-          bot_pids: %{String.t() => pid()}
+          bot_pids: %{String.t() => pid()},
+          started_at: DateTime.t() | nil
         }
 
   # -- Client API --
@@ -165,7 +167,8 @@ defmodule TetrisGame.GameRoom do
       tick: 0,
       tick_timer: nil,
       bot_ids: MapSet.new(),
-      bot_pids: %{}
+      bot_pids: %{},
+      started_at: nil
     }
 
     {:ok, state}
@@ -239,17 +242,21 @@ defmodule TetrisGame.GameRoom do
         )
 
         timer_ref = schedule_tick()
+        started_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
         new_state = %{
           state
           | status: :playing,
             players: players_with_targets,
-            tick_timer: timer_ref
+            tick_timer: timer_ref,
+            started_at: started_at
         }
 
         Enum.each(state.bot_pids, fn {_, pid} ->
           send(pid, :game_started)
         end)
+
+        publish_game_start(new_state)
 
         {:reply, :ok, new_state}
     end
@@ -486,23 +493,28 @@ defmodule TetrisGame.GameRoom do
     # Add garbage-related events to players
     players_after_garbage =
       Enum.reduce(all_garbage_events, players_after_garbage, fn {sender_id, target_id, count}, acc ->
-        # Add garbage_sent event to sender
+        # Add garbage_sent event and increment cumulative counter on sender
         acc =
           case Map.fetch(acc, sender_id) do
             {:ok, sender} ->
               Map.put(acc, sender_id, %{
                 sender
-                | events: sender.events ++ [%{type: "garbage_sent", target: target_id, count: count}]
+                | events: sender.events ++ [%{type: "garbage_sent", target: target_id, count: count}],
+                  garbage_sent: sender.garbage_sent + count
               })
 
             :error ->
               acc
           end
 
-        # Add garbage_received event to target
+        # Add garbage_received event and increment cumulative counter on target
         case Map.fetch(acc, target_id) do
           {:ok, target} ->
-            Map.put(acc, target_id, %{target | events: target.events ++ [%{type: "garbage_received", count: count}]})
+            Map.put(acc, target_id, %{
+              target
+              | events: target.events ++ [%{type: "garbage_received", count: count}],
+                garbage_received: target.garbage_received + count
+            })
 
           :error ->
             acc
@@ -549,6 +561,9 @@ defmodule TetrisGame.GameRoom do
 
     # 8. Broadcast state
     broadcast_state(state)
+
+    # 9. Publish events to NATS
+    publish_tick_events(state)
 
     state
   end
@@ -899,5 +914,100 @@ defmodule TetrisGame.GameRoom do
 
   defp schedule_tick do
     Process.send_after(self(), :tick, @tick_interval)
+  end
+
+  # -- NATS Event Publishing --
+
+  defp publish_tick_events(state) do
+    alias Platform.Streaming.EventPublisher
+
+    # Collect per-player events from this tick
+    player_events =
+      Enum.flat_map(state.players, fn {player_id, player} ->
+        Enum.map(player.events, fn event ->
+          %{
+            tick: state.tick,
+            player_id: player_id,
+            type: event.type,
+            data: Map.drop(event, [:type])
+          }
+        end)
+      end)
+
+    lifecycle_events = build_lifecycle_events(state)
+
+    all_events = player_events ++ lifecycle_events
+
+    if all_events != [] do
+      EventPublisher.publish_batch(state.room_id, all_events)
+    end
+  end
+
+  defp build_lifecycle_events(%{status: :finished} = state) do
+    ended_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    duration_ms =
+      if state.started_at, do: DateTime.diff(ended_at, state.started_at, :millisecond)
+
+    player_stats =
+      Enum.map(state.players, fn {player_id, player} ->
+        %{
+          player_id: player_id,
+          user_id: nil,
+          placement: compute_placement(player, player_id, state),
+          score: player.score,
+          lines_cleared: player.lines,
+          garbage_sent: player.garbage_sent,
+          garbage_received: player.garbage_received,
+          pieces_placed: player.pieces_placed,
+          duration_ms: duration_ms
+        }
+      end)
+
+    [
+      %{
+        tick: state.tick,
+        type: "game_end",
+        data: %{
+          room_id: state.room_id,
+          mode: "multiplayer",
+          player_count: map_size(state.players),
+          eliminated_order: state.eliminated_order,
+          players: player_stats,
+          started_at: state.started_at && DateTime.to_iso8601(state.started_at),
+          ended_at: DateTime.to_iso8601(ended_at)
+        }
+      }
+    ]
+  end
+
+  defp build_lifecycle_events(_state), do: []
+
+  defp compute_placement(%{alive: true}, _player_id, _state), do: 1
+
+  defp compute_placement(_player, player_id, state) do
+    case Enum.find_index(state.eliminated_order, &(&1 == player_id)) do
+      nil -> nil
+      idx -> map_size(state.players) - idx
+    end
+  end
+
+  defp publish_game_start(state) do
+    alias Platform.Streaming.EventPublisher
+
+    player_list =
+      Enum.map(state.players, fn {player_id, player} ->
+        %{player_id: player_id, nickname: player.nickname}
+      end)
+
+    EventPublisher.publish(state.room_id, %{
+      tick: 0,
+      type: "game_start",
+      data: %{
+        room_id: state.room_id,
+        players: player_list,
+        player_count: map_size(state.players)
+      }
+    })
   end
 end

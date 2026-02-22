@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useTetris } from '../hooks/useTetris.ts';
 import { useSoundEffects } from '../hooks/useSoundEffects.ts';
+import { useAuth } from '../platform/auth/useAuth.ts';
 import { computeDangerLevel } from '../utils/dangerZone.ts';
 import { soundManager } from '../audio/SoundManager.ts';
 import AudioControls from './AudioControls.tsx';
@@ -9,6 +10,8 @@ import Board from './Board.tsx';
 import Sidebar from './Sidebar.tsx';
 import { Button, PageTransition } from './ui/index.ts';
 import type { ReactNode } from 'react';
+
+const API_URL = import.meta.env['VITE_API_URL'] ?? 'http://localhost:4000';
 
 function Overlay({
   children,
@@ -35,6 +38,8 @@ export default function SoloGame() {
   const navigate = useNavigate();
   const { board, score, lines, level, nextPiece, gameOver, gameStarted, isPaused, startGame, togglePause, events } =
     useTetris();
+  const { isAuthenticated, token } = useAuth();
+  const reportedRef = useRef(false);
 
   useSoundEffects(events);
   const dangerLevel = computeDangerLevel(board);
@@ -42,8 +47,28 @@ export default function SoloGame() {
   useEffect(() => {
     if (gameStarted) {
       soundManager.init();
+      reportedRef.current = false;
     }
   }, [gameStarted]);
+
+  useEffect(() => {
+    if (gameOver && isAuthenticated && token && !reportedRef.current) {
+      reportedRef.current = true;
+      fetch(`${API_URL}/api/solo_results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          score,
+          lines_cleared: lines,
+          pieces_placed: 0,
+          duration_ms: 0,
+        }),
+      }).catch(() => {});
+    }
+  }, [gameOver, isAuthenticated, token, score, lines]);
 
   const nextPieceObj = nextPiece ? { shape: nextPiece.shape, color: nextPiece.color } : null;
 

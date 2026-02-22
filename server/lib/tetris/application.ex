@@ -12,6 +12,10 @@ defmodule Tetris.Application do
       TetrisGame.RoomSupervisor,
       TetrisGame.BotSupervisor,
       TetrisGame.Lobby,
+      Platform.Streaming.NatsConnection,
+      Platform.Streaming.StreamSetup,
+      Platform.Streaming.MatchProjector,
+      Platform.Streaming.KeyMomentDetector,
       TetrisWeb.Endpoint
     ]
 

@@ -28,6 +28,8 @@ defmodule Tetris.PlayerState do
     :gravity_threshold,
     :input_queue,
     :pieces_placed,
+    :garbage_sent,
+    :garbage_received,
     :combo_count,
     :b2b_tetris,
     :events
@@ -50,6 +52,8 @@ defmodule Tetris.PlayerState do
           gravity_threshold: pos_integer(),
           input_queue: :queue.queue(),
           pieces_placed: non_neg_integer(),
+          garbage_sent: non_neg_integer(),
+          garbage_received: non_neg_integer(),
           combo_count: non_neg_integer(),
           b2b_tetris: boolean(),
           events: list(map())
@@ -85,6 +89,8 @@ defmodule Tetris.PlayerState do
       gravity_threshold: 16,
       input_queue: :queue.new(),
       pieces_placed: 0,
+      garbage_sent: 0,
+      garbage_received: 0,
       combo_count: 0,
       b2b_tetris: false,
       events: []
@@ -139,6 +145,8 @@ defmodule Tetris.PlayerState do
       gravity_counter: state.gravity_counter,
       gravity_threshold: state.gravity_threshold,
       pieces_placed: state.pieces_placed,
+      garbage_sent: state.garbage_sent,
+      garbage_received: state.garbage_received,
       combo_count: state.combo_count,
       b2b_tetris: state.b2b_tetris
     }
@@ -169,6 +177,8 @@ defmodule Tetris.PlayerState do
       gravity_threshold: game_logic_map.gravity_threshold,
       input_queue: original.input_queue,
       pieces_placed: game_logic_map.pieces_placed,
+      garbage_sent: Map.get(game_logic_map, :garbage_sent, original.garbage_sent),
+      garbage_received: Map.get(game_logic_map, :garbage_received, original.garbage_received),
       combo_count: Map.get(game_logic_map, :combo_count, 0),
       b2b_tetris: Map.get(game_logic_map, :b2b_tetris, false),
       events: original.events

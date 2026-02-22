@@ -28,6 +28,14 @@ defmodule TetrisWeb.Router do
     get("/check-nickname/:nickname", AuthController, :check_nickname)
   end
 
+  scope "/api", PlatformWeb do
+    pipe_through(:api)
+
+    get("/matches", MatchController, :index)
+    get("/matches/:id", MatchController, :show)
+    post("/solo_results", SoloResultController, :create)
+  end
+
   scope "/api", TetrisWeb do
     pipe_through(:api)
   end

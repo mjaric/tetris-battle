@@ -22,3 +22,5 @@ config :ueberauth, Ueberauth,
     github: {Ueberauth.Strategy.Github, []},
     discord: {Ueberauth.Strategy.Discord, []}
   ]
+
+config :tetris, Platform.Streaming, enabled: false

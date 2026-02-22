@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../constants.ts';
 import type { GameEvent } from '../types.ts';
 import type { DangerLevel } from '../utils/dangerZone.ts';
@@ -28,7 +29,7 @@ interface PlayerCellProps {
   size: number;
 }
 
-function PlayerCell({ color, size }: PlayerCellProps) {
+const PlayerCell = memo(function PlayerCell({ color, size }: PlayerCellProps) {
   const isGhost = typeof color === 'string' && color.startsWith('ghost:');
   const actualColor = isGhost ? color.split(':')[1] : color;
   const showInset = size > 16;
@@ -62,7 +63,7 @@ function PlayerCell({ color, size }: PlayerCellProps) {
       }}
     />
   );
-}
+});
 
 interface GarbageMeterProps {
   count: number;
@@ -70,7 +71,7 @@ interface GarbageMeterProps {
   totalRows: number;
 }
 
-function GarbageMeter({ count, cellSize, totalRows }: GarbageMeterProps) {
+const GarbageMeter = memo(function GarbageMeter({ count, cellSize, totalRows }: GarbageMeterProps) {
   if (count === 0) return null;
 
   const meterWidth = Math.max(3, Math.round(cellSize * 0.2));
@@ -100,7 +101,7 @@ function GarbageMeter({ count, cellSize, totalRows }: GarbageMeterProps) {
       />
     </div>
   );
-}
+});
 
 function glowStyles(hue: number, level: GlowLevel): React.CSSProperties {
   const h = hue;
@@ -236,319 +237,362 @@ function tintAlpha(level: GlowLevel): number {
   }
 }
 
-export default function PlayerBoard({
-  board,
-  cellSize,
-  nickname,
-  score,
-  lines,
-  pendingGarbage,
-  playerHue,
-  glowLevel,
-  isMe,
-  nextPiece,
-  targetNickname,
-  level,
-  latency,
-  events = [],
-  dangerLevel = 'none',
-}: PlayerBoardProps) {
-  const { boardClassName, overlays, dangerClassName, garbageMeterPulse } = useAnimations(events, dangerLevel, isMe);
-  const fontSize = Math.max(8, Math.round(cellSize * 0.4));
-  const alpha = tintAlpha(glowLevel);
-  const glow = glowStyles(playerHue, glowLevel);
-  const dimmed = glowLevel === 'eliminated';
-  const hudCell = Math.round(cellSize * 0.5);
-  const boardPx = BOARD_WIDTH * cellSize;
+function boardsEqual(a: (string | null)[][], b: (string | null)[][]): boolean {
+  if (a.length !== b.length) return false;
+  for (let y = 0; y < a.length; y++) {
+    const rowA = a[y];
+    const rowB = b[y];
+    if (!rowA || !rowB || rowA.length !== rowB.length) return false;
+    for (let x = 0; x < rowA.length; x++) {
+      if (rowA[x] !== rowB[x]) return false;
+    }
+  }
+  return true;
+}
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {isMe ? (
-        <div
-          style={{
-            marginBottom: 8,
-            width: boardPx + 8,
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-            border: `1px solid hsla(${String(playerHue)}, 50%, 50%, 0.2)`,
-            borderRadius: 6,
-            padding: '6px 8px',
-          }}
-        >
+function eventsEqual(a: GameEvent[], b: GameEvent[]): boolean {
+  if (a.length !== b.length) return false;
+  if (a.length === 0) return true;
+  return a === b;
+}
+
+const PlayerBoard = memo(
+  function PlayerBoard({
+    board,
+    cellSize,
+    nickname,
+    score,
+    lines,
+    pendingGarbage,
+    playerHue,
+    glowLevel,
+    isMe,
+    nextPiece,
+    targetNickname,
+    level,
+    latency,
+    events = [],
+    dangerLevel = 'none',
+  }: PlayerBoardProps) {
+    const { boardClassName, overlays, dangerClassName, garbageMeterPulse } = useAnimations(events, dangerLevel, isMe);
+    const fontSize = Math.max(8, Math.round(cellSize * 0.4));
+    const alpha = tintAlpha(glowLevel);
+    const glow = glowStyles(playerHue, glowLevel);
+    const dimmed = glowLevel === 'eliminated';
+    const hudCell = Math.round(cellSize * 0.5);
+    const boardPx = BOARD_WIDTH * cellSize;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {isMe ? (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 6,
+              marginBottom: 8,
+              width: boardPx + 8,
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+              border: `1px solid hsla(${String(playerHue)}, 50%, 50%, 0.2)`,
+              borderRadius: 6,
+              padding: '6px 8px',
             }}
           >
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                overflow: 'hidden',
+                justifyContent: 'space-between',
+                marginBottom: 6,
               }}
             >
-              <span
+              <div
                 style={{
-                  fontSize: Math.max(7, fontSize - 2),
-                  background: `linear-gradient(135deg, hsl(${String(playerHue)}, 70%, 50%), hsl(${String(playerHue)}, 70%, 40%))`,
-                  color: '#fff',
-                  borderRadius: 3,
-                  padding: '2px 6px',
-                  fontWeight: 'bold',
-                  letterSpacing: 1.5,
-                  textTransform: 'uppercase',
-                  flexShrink: 0,
-                }}
-              >
-                You
-              </span>
-              <span
-                style={{
-                  fontWeight: 'bold',
-                  fontSize: Math.max(9, fontSize + 1),
-                  color: `hsl(${String(playerHue)}, 60%, 75%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
                 }}
               >
-                {nickname}
-              </span>
+                <span
+                  style={{
+                    fontSize: Math.max(7, fontSize - 2),
+                    background: `linear-gradient(135deg, hsl(${String(playerHue)}, 70%, 50%), hsl(${String(playerHue)}, 70%, 40%))`,
+                    color: '#fff',
+                    borderRadius: 3,
+                    padding: '2px 6px',
+                    fontWeight: 'bold',
+                    letterSpacing: 1.5,
+                    textTransform: 'uppercase',
+                    flexShrink: 0,
+                  }}
+                >
+                  You
+                </span>
+                <span
+                  style={{
+                    fontWeight: 'bold',
+                    fontSize: Math.max(9, fontSize + 1),
+                    color: `hsl(${String(playerHue)}, 60%, 75%)`,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {nickname}
+                </span>
+              </div>
+              {nextPiece && <MiniNextPiece piece={nextPiece} hudCell={hudCell} />}
             </div>
-            {nextPiece && <MiniNextPiece piece={nextPiece} hudCell={hudCell} />}
-          </div>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 4,
-              marginBottom: 5,
-            }}
-          >
-            <HudStat label="Score" value={score.toLocaleString()} accent="#fff" fontSize={fontSize} />
-            <HudStat
-              label="Lines"
-              value={String(lines)}
-              accent={`hsl(${String(playerHue)}, 60%, 70%)`}
-              fontSize={fontSize}
-            />
-            <HudStat
-              label="Level"
-              value={String(level ?? 1)}
-              accent={`hsl(${String(playerHue)}, 60%, 70%)`}
-              fontSize={fontSize}
-            />
-          </div>
+            <div
+              style={{
+                display: 'flex',
+                gap: 4,
+                marginBottom: 5,
+              }}
+            >
+              <HudStat label="Score" value={score.toLocaleString()} accent="#fff" fontSize={fontSize} />
+              <HudStat
+                label="Lines"
+                value={String(lines)}
+                accent={`hsl(${String(playerHue)}, 60%, 70%)`}
+                fontSize={fontSize}
+              />
+              <HudStat
+                label="Level"
+                value={String(level ?? 1)}
+                accent={`hsl(${String(playerHue)}, 60%, 70%)`}
+                fontSize={fontSize}
+              />
+            </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: Math.max(7, fontSize - 1),
-            }}
-          >
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                justifyContent: 'space-between',
+                fontSize: Math.max(7, fontSize - 1),
               }}
             >
-              <span
+              <div
                 style={{
-                  fontSize: Math.max(6, fontSize - 3),
-                  textTransform: 'uppercase',
-                  letterSpacing: 1,
-                  color: '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
                 }}
               >
-                Target
-              </span>
-              <span
-                style={{
-                  color: '#00f0f0',
-                  fontWeight: 'bold',
-                }}
-              >
-                {targetNickname ?? '\u2014'}
-              </span>
-              <span
-                style={{
-                  fontSize: Math.max(6, fontSize - 3),
-                  color: '#444',
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  borderRadius: 2,
-                  padding: '1px 3px',
-                }}
-              >
-                Tab
-              </span>
+                <span
+                  style={{
+                    fontSize: Math.max(6, fontSize - 3),
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                    color: '#666',
+                  }}
+                >
+                  Target
+                </span>
+                <span
+                  style={{
+                    color: '#00f0f0',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {targetNickname ?? '\u2014'}
+                </span>
+                <span
+                  style={{
+                    fontSize: Math.max(6, fontSize - 3),
+                    color: '#444',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderRadius: 2,
+                    padding: '1px 3px',
+                  }}
+                >
+                  Tab
+                </span>
+              </div>
+              {latency != null && (
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: Math.max(7, fontSize - 2),
+                    color: latencyColor(latency),
+                  }}
+                >
+                  {latency}ms
+                </span>
+              )}
             </div>
-            {latency != null && (
-              <span
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: Math.max(7, fontSize - 2),
-                  color: latencyColor(latency),
-                }}
-              >
-                {latency}ms
-              </span>
-            )}
           </div>
-        </div>
-      ) : (
+        ) : (
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 6,
+              fontSize,
+              lineHeight: 1.3,
+              opacity: dimmed ? 0.3 : 1,
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 'bold',
+                color: `hsl(${String(playerHue)}, 70%, 70%)`,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {nickname}
+            </div>
+            <div style={{ color: '#888' }}>
+              {score} pts / {lines} lines
+            </div>
+          </div>
+        )}
+
         <div
+          className={boardClassName}
           style={{
-            textAlign: 'center',
-            marginBottom: 6,
-            fontSize,
-            lineHeight: 1.3,
-            opacity: dimmed ? 0.3 : 1,
+            position: 'relative',
+            ...glow,
+            borderRadius: 4,
+            willChange: 'box-shadow',
+            contain: 'layout style',
           }}
         >
-          <div
-            style={{
-              fontWeight: 'bold',
-              color: `hsl(${String(playerHue)}, 70%, 70%)`,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {nickname}
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <div className={garbageMeterPulse ? 'anim-garbage-meter-pulse' : ''}>
+              <GarbageMeter count={pendingGarbage} cellSize={cellSize} totalRows={BOARD_HEIGHT} />
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${String(BOARD_WIDTH)}, ${String(cellSize)}px)`,
+                gridTemplateRows: `repeat(${String(BOARD_HEIGHT)}, ${String(cellSize)}px)`,
+                position: 'relative',
+                contain: 'strict',
+              }}
+            >
+              {board.map((row, y) =>
+                row.map((cell, x) => <PlayerCell key={`${String(y)}-${String(x)}`} color={cell} size={cellSize} />)
+              )}
+            </div>
           </div>
-          <div style={{ color: '#888' }}>
-            {score} pts / {lines} lines
-          </div>
-        </div>
-      )}
 
-      <div
-        className={boardClassName}
-        style={{
-          position: 'relative',
-          ...glow,
-          borderRadius: 4,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <div className={garbageMeterPulse ? 'anim-garbage-meter-pulse' : ''}>
-            <GarbageMeter count={pendingGarbage} cellSize={cellSize} totalRows={BOARD_HEIGHT} />
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${String(BOARD_WIDTH)}, ${String(cellSize)}px)`,
-              gridTemplateRows: `repeat(${String(BOARD_HEIGHT)}, ${String(cellSize)}px)`,
-              position: 'relative',
-            }}
-          >
-            {board.map((row, y) =>
-              row.map((cell, x) => <PlayerCell key={`${String(y)}-${String(x)}`} color={cell} size={cellSize} />)
-            )}
-          </div>
-        </div>
+          {/* Danger zone overlay */}
+          {dangerClassName && (
+            <div
+              className={dangerClassName}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: 4,
+                pointerEvents: 'none',
+                zIndex: 1,
+                backgroundColor: dangerLevel === 'critical' ? 'rgba(255, 71, 87, 0.25)' : 'rgba(255, 71, 87, 0.1)',
+              }}
+            />
+          )}
 
-        {/* Danger zone overlay */}
-        {dangerClassName && (
-          <div
-            className={dangerClassName}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: 4,
-              pointerEvents: 'none',
-              zIndex: 1,
-            }}
-          />
-        )}
+          {/* Floating text overlays */}
+          {overlays.map((overlay) => (
+            <div
+              key={overlay.id}
+              className={overlay.className}
+              style={{
+                position: 'absolute',
+                top: '40%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                color: overlay.color,
+                fontWeight: 'bold',
+                fontSize: Math.max(14, Math.round(cellSize * 0.8)),
+                textShadow: `0 0 10px ${overlay.color}`,
+                pointerEvents: 'none',
+                zIndex: 2,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {overlay.text}
+            </div>
+          ))}
 
-        {/* Floating text overlays */}
-        {overlays.map((overlay) => (
-          <div
-            key={overlay.id}
-            className={overlay.className}
-            style={{
-              position: 'absolute',
-              top: '40%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              color: overlay.color,
-              fontWeight: 'bold',
-              fontSize: Math.max(14, Math.round(cellSize * 0.8)),
-              textShadow: `0 0 10px ${overlay.color}`,
-              pointerEvents: 'none',
-              zIndex: 2,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {overlay.text}
-          </div>
-        ))}
-
-        {alpha > 0 && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: `hsla(${String(playerHue)}, 70%, 50%, ${String(alpha)})`,
-              borderRadius: 4,
-              pointerEvents: 'none',
-            }}
-          />
-        )}
-
-        {glowLevel === 'target' && (
-          <>
-            <CornerBrackets hue={playerHue} fontSize={fontSize} />
+          {alpha > 0 && (
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
-                border: `2px solid hsl(${String(playerHue)}, 70%, 60%)`,
+                backgroundColor: `hsla(${String(playerHue)}, 70%, 50%, ${String(alpha)})`,
                 borderRadius: 4,
                 pointerEvents: 'none',
-                animation: 'pulse-border 1.5s ease-in-out infinite',
               }}
             />
-          </>
-        )}
+          )}
 
-        {glowLevel === 'eliminated' && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              borderRadius: 4,
-              pointerEvents: 'none',
-            }}
-          >
-            <span
+          {glowLevel === 'target' && (
+            <>
+              <CornerBrackets hue={playerHue} fontSize={fontSize} />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: `2px solid hsl(${String(playerHue)}, 70%, 60%)`,
+                  borderRadius: 4,
+                  pointerEvents: 'none',
+                  animation: 'pulse-border 1.5s ease-in-out infinite',
+                }}
+              />
+            </>
+          )}
+
+          {glowLevel === 'eliminated' && (
+            <div
               style={{
-                color: '#ff4757',
-                fontWeight: 'bold',
-                fontSize: Math.max(10, Math.round(cellSize * 0.6)),
-                textTransform: 'uppercase',
-                letterSpacing: 2,
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                borderRadius: 4,
+                pointerEvents: 'none',
               }}
             >
-              Eliminated
-            </span>
-          </div>
-        )}
+              <span
+                style={{
+                  color: '#ff4757',
+                  fontWeight: 'bold',
+                  fontSize: Math.max(10, Math.round(cellSize * 0.6)),
+                  textTransform: 'uppercase',
+                  letterSpacing: 2,
+                }}
+              >
+                Eliminated
+              </span>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+  (prev, next) =>
+    boardsEqual(prev.board, next.board) &&
+    prev.cellSize === next.cellSize &&
+    prev.score === next.score &&
+    prev.lines === next.lines &&
+    prev.pendingGarbage === next.pendingGarbage &&
+    prev.playerHue === next.playerHue &&
+    prev.glowLevel === next.glowLevel &&
+    prev.isMe === next.isMe &&
+    prev.nickname === next.nickname &&
+    prev.targetNickname === next.targetNickname &&
+    prev.level === next.level &&
+    prev.latency === next.latency &&
+    prev.dangerLevel === next.dangerLevel &&
+    prev.nextPiece === next.nextPiece &&
+    eventsEqual(prev.events ?? [], next.events ?? [])
+);
+
+export default PlayerBoard;
 
 interface CornerBracketsProps {
   hue: number;

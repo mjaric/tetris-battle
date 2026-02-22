@@ -30,4 +30,9 @@ config :ueberauth, Ueberauth,
 
 config :tetris, :client_url, "http://localhost:4000"
 
+config :tetris, Platform.Streaming,
+  nats_url: "nats://localhost:4222",
+  stream_name: "GAME_EVENTS",
+  stream_subjects: ["game.>"]
+
 import_config "#{config_env()}.exs"

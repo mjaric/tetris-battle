@@ -6,7 +6,7 @@ type PaddingSize = 'none' | 'sm' | 'md' | 'lg';
 interface GlassCardProps {
   variant?: GlassVariant;
   padding?: PaddingSize;
-  glow?: string;
+  glow?: string | undefined;
   className?: string;
   children: ReactNode;
   onClick?: () => void;
