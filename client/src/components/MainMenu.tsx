@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '../platform/auth/useAuth.ts';
+import { GlassCard, Button, PageTransition } from './ui/index.ts';
 
 const API_URL = import.meta.env['VITE_API_URL'] ?? 'http://localhost:4000';
 
@@ -8,56 +9,61 @@ export default function MainMenu() {
   const { user, isGuest, logout } = useAuth();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
+    <PageTransition className="flex min-h-screen flex-col items-center justify-center p-8">
       {user && (
         <div className="absolute top-6 right-6 flex items-center gap-3">
-          <span className="text-sm text-gray-400">{user.nickname ?? user.displayName}</span>
+          <span className="text-sm text-text-muted">{user.nickname ?? user.displayName}</span>
           {isGuest && (
             <div className="flex gap-2">
               <a
                 href={`${API_URL}/auth/google`}
-                className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+                className="rounded-lg border border-accent/30 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent hover:text-white"
               >
                 Link Google
               </a>
               <a
                 href={`${API_URL}/auth/github`}
-                className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+                className="rounded-lg border border-accent/30 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent hover:text-white"
               >
                 Link GitHub
               </a>
               <a
                 href={`${API_URL}/auth/discord`}
-                className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+                className="rounded-lg border border-accent/30 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent hover:text-white"
               >
                 Link Discord
               </a>
             </div>
           )}
-          <button
-            onClick={logout}
-            className="cursor-pointer rounded border border-border px-3 py-1 text-xs text-gray-500 hover:text-white"
-          >
+          <Button variant="ghost" size="sm" onClick={logout}>
             Logout
-          </button>
+          </Button>
         </div>
       )}
 
-      <h1 className="mb-12 bg-gradient-to-br from-accent to-cyan bg-clip-text text-5xl font-extrabold uppercase tracking-widest text-transparent">
+      <h1 className="mb-10 bg-gradient-to-br from-accent to-cyan bg-clip-text font-display text-5xl font-bold uppercase tracking-widest text-transparent">
         Tetris
       </h1>
-      <button
-        onClick={() => navigate('/solo')}
-        className="mb-4 w-65 cursor-pointer rounded-lg bg-accent px-12 py-4 text-lg font-bold uppercase tracking-wide text-white transition-colors hover:brightness-110"
-      >
-        Solo
-      </button>
-      <button
-        onClick={() => navigate('/lobby')}
-        className="mb-4 w-65 cursor-pointer rounded-lg bg-green px-12 py-4 text-lg font-bold uppercase tracking-wide text-white transition-colors hover:brightness-110"
-      >
-        Multiplayer
-      </button>
-    </div>
+
+      <div className="flex flex-col gap-6 sm:flex-row">
+        <GlassCard variant="elevated" padding="lg" className="flex w-64 flex-col items-center text-center">
+          <span className="mb-3 text-4xl">🎮</span>
+          <h2 className="mb-1 font-display text-xl font-bold text-text-primary">Solo Play</h2>
+          <p className="mb-5 text-sm text-text-muted">Practice your skills against gravity</p>
+          <Button variant="primary" fullWidth onClick={() => navigate('/solo')}>
+            Play Solo
+          </Button>
+        </GlassCard>
+
+        <GlassCard variant="elevated" padding="lg" className="flex w-64 flex-col items-center text-center">
+          <span className="mb-3 text-4xl">⚔️</span>
+          <h2 className="mb-1 font-display text-xl font-bold text-text-primary">Multiplayer</h2>
+          <p className="mb-5 text-sm text-text-muted">Battle other players in real-time</p>
+          <Button variant="primary" fullWidth onClick={() => navigate('/lobby')}>
+            Enter Lobby
+          </Button>
+        </GlassCard>
+      </div>
+    </PageTransition>
   );
 }
