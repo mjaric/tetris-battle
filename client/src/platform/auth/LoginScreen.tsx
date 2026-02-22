@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from './useAuth.ts';
+import AmbientBackground from '../../components/ui/AmbientBackground.tsx';
+import GlassCard from '../../components/ui/GlassCard.tsx';
+import Button from '../../components/ui/Button.tsx';
+import Divider from '../../components/ui/Divider.tsx';
+import PageTransition from '../../components/ui/PageTransition.tsx';
 
 export default function LoginScreen() {
   const { loginWithGoogle, loginWithGithub, loginWithDiscord, loginAsGuest, isAuthenticated, loading } = useAuth();
@@ -15,48 +20,35 @@ export default function LoginScreen() {
   if (loading) return null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
-      <h1 className="mb-12 bg-gradient-to-br from-accent to-cyan bg-clip-text text-5xl font-extrabold uppercase tracking-widest text-transparent">
-        Tetris
-      </h1>
+    <div className="relative flex min-h-screen flex-col items-center justify-center">
+      <AmbientBackground />
+      <PageTransition className="flex w-full flex-col items-center px-4">
+        <h1 className="mb-2 bg-gradient-to-br from-accent to-cyan bg-clip-text font-display text-5xl font-bold uppercase tracking-widest text-transparent">
+          Tetris
+        </h1>
+        <p className="mb-10 text-sm text-text-muted">Multiplayer battle arena</p>
 
-      <div className="w-full max-w-sm space-y-4">
-        <button
-          onClick={loginWithGoogle}
-          className="w-full cursor-pointer rounded-lg bg-white px-4 py-3 font-medium text-gray-800 hover:bg-gray-100"
-        >
-          Continue with Google
-        </button>
-        <button
-          onClick={loginWithGithub}
-          className="w-full cursor-pointer rounded-lg bg-gray-700 px-4 py-3 font-medium text-white hover:bg-gray-600"
-        >
-          Continue with GitHub
-        </button>
-        <button
-          onClick={loginWithDiscord}
-          className="w-full cursor-pointer rounded-lg bg-indigo-600 px-4 py-3 font-medium text-white hover:bg-indigo-500"
-        >
-          Continue with Discord
-        </button>
-
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
+        <GlassCard variant="elevated" padding="lg" className="w-full max-w-sm">
+          <div className="space-y-3">
+            <Button variant="ghost" fullWidth onClick={loginWithGoogle} className="border border-glass-border">
+              Continue with Google
+            </Button>
+            <Button variant="ghost" fullWidth onClick={loginWithGithub} className="border border-glass-border">
+              Continue with GitHub
+            </Button>
+            <Button variant="ghost" fullWidth onClick={loginWithDiscord} className="border border-glass-border">
+              Continue with Discord
+            </Button>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-bg-primary px-2 text-gray-500">or</span>
-          </div>
-        </div>
 
-        <button
-          onClick={() => void loginAsGuest()}
-          className="w-full cursor-pointer rounded-lg border border-border px-4 py-3 font-medium text-gray-400 hover:bg-bg-tertiary"
-        >
-          Play as Guest
-        </button>
-        <p className="text-center text-xs text-gray-600">Guest accounts can be upgraded later</p>
-      </div>
+          <Divider label="OR" className="my-6" />
+
+          <Button variant="secondary" fullWidth onClick={() => void loginAsGuest()}>
+            Play as Guest
+          </Button>
+          <p className="mt-3 text-center text-xs text-text-muted">Guest accounts can be upgraded later</p>
+        </GlassCard>
+      </PageTransition>
     </div>
   );
 }
