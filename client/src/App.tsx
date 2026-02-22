@@ -9,7 +9,10 @@ import SoloGame from './components/SoloGame.tsx';
 import Lobby from './components/Lobby.tsx';
 import GameSession from './components/GameSession.tsx';
 import AppShell from './components/ui/AppShell.tsx';
+import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
+
+const ComponentShowcase = import.meta.env.DEV ? lazy(() => import('./components/dev/ComponentShowcase.tsx')) : null;
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated, loading } = useAuthContext();
@@ -79,12 +82,14 @@ function AppRoutes() {
         }
       />
       {/* Dev component showcase — only in dev mode */}
-      {import.meta.env.DEV && (
+      {import.meta.env.DEV && ComponentShowcase && (
         <Route
           path="/dev/components"
           element={
             <AppShell>
-              <></>
+              <Suspense fallback={null}>
+                <ComponentShowcase />
+              </Suspense>
             </AppShell>
           }
         />
