@@ -57,8 +57,8 @@ export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoar
   const nextPieceObj = tetroDef ? { shape: tetroDef.shape, color: tetroDef.color } : null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
-      <h1 className="mb-4 text-2xl font-extrabold uppercase tracking-widest bg-gradient-to-br from-accent to-cyan bg-clip-text text-transparent">
+    <div className="flex min-h-screen flex-col items-center justify-center">
+      <h1 className="mb-4 bg-gradient-to-br from-accent to-cyan bg-clip-text font-display text-2xl font-bold uppercase tracking-widest text-transparent">
         Tetris Battle
       </h1>
       <div
