@@ -43,30 +43,6 @@ defmodule Platform.AccountsTest do
     end
   end
 
-  describe "find_or_create_user/1" do
-    test "creates new user when not found" do
-      attrs = %{
-        provider: "github",
-        provider_id: "new_uid",
-        display_name: "NewUser"
-      }
-
-      assert {:ok, %User{}} = Accounts.find_or_create_user(attrs)
-    end
-
-    test "returns existing user when found" do
-      attrs = %{
-        provider: "github",
-        provider_id: "existing_uid",
-        display_name: "Existing"
-      }
-
-      {:ok, original} = Accounts.create_user(attrs)
-      {:ok, found} = Accounts.find_or_create_user(attrs)
-      assert found.id == original.id
-    end
-  end
-
   describe "get_user/1" do
     test "returns user by id" do
       {:ok, user} =
@@ -81,49 +57,6 @@ defmodule Platform.AccountsTest do
 
     test "returns nil for nonexistent id" do
       assert Accounts.get_user(Ecto.UUID.generate()) == nil
-    end
-  end
-
-  describe "upgrade_anonymous_user/2" do
-    test "upgrades anonymous user in-place" do
-      {:ok, anon} =
-        Accounts.create_user(%{
-          provider: "anonymous",
-          provider_id: Ecto.UUID.generate(),
-          display_name: "Guest_abc",
-          is_anonymous: true
-        })
-
-      upgrade_attrs = %{
-        provider: "google",
-        provider_id: "google_456",
-        display_name: "RealUser",
-        email: "real@example.com",
-        is_anonymous: false
-      }
-
-      assert {:ok, upgraded} =
-               Accounts.upgrade_anonymous_user(anon, upgrade_attrs)
-
-      assert upgraded.id == anon.id
-      assert upgraded.provider == "google"
-      assert upgraded.provider_id == "google_456"
-      assert upgraded.is_anonymous == false
-    end
-
-    test "no-op for non-anonymous user" do
-      {:ok, user} =
-        Accounts.create_user(%{
-          provider: "google",
-          provider_id: "already_real",
-          display_name: "Already"
-        })
-
-      assert {:ok, same} =
-               Accounts.upgrade_anonymous_user(user, %{provider: "github"})
-
-      assert same.id == user.id
-      assert same.provider == "google"
     end
   end
 

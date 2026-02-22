@@ -27,17 +27,6 @@ defmodule Platform.Accounts do
     |> Repo.update()
   end
 
-  def find_or_create_user(attrs) do
-    changeset = User.changeset(%User{}, attrs)
-
-    Repo.insert(
-      changeset,
-      on_conflict: [set: [updated_at: DateTime.utc_now()]],
-      conflict_target: [:provider, :provider_id],
-      returning: true
-    )
-  end
-
   def register_user(attrs) do
     %User{}
     |> User.registration_changeset(attrs)
@@ -63,20 +52,6 @@ defmodule Platform.Accounts do
   def nickname_available?(nickname) do
     Regex.match?(@nickname_format, nickname) and
       not Repo.exists?(from(u in User, where: u.nickname == ^nickname))
-  end
-
-  def upgrade_anonymous_user(
-        %User{is_anonymous: true} = user,
-        attrs
-      ) do
-    update_user(user, attrs)
-  end
-
-  def upgrade_anonymous_user(
-        %User{is_anonymous: false} = user,
-        _attrs
-      ) do
-    {:ok, user}
   end
 
   def search_users_by_name(query_string, limit \\ 20) do

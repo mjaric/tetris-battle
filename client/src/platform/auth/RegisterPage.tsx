@@ -24,6 +24,12 @@ export default function RegisterPage() {
     }
   }, [registrationData]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const checkNickname = useCallback(async (value: string) => {
     if (!NICKNAME_REGEX.test(value)) {
       setNicknameStatus('invalid');
@@ -32,11 +38,17 @@ export default function RegisterPage() {
 
     setNicknameStatus('checking');
 
-    const resp = await fetch(`${API_URL}/api/auth/check-nickname/${encodeURIComponent(value)}`);
+    try {
+      const resp = await fetch(`${API_URL}/api/auth/check-nickname/${encodeURIComponent(value)}`);
 
-    if (resp.ok) {
-      const data = (await resp.json()) as { available: boolean };
-      setNicknameStatus(data.available ? 'available' : 'taken');
+      if (resp.ok) {
+        const data = (await resp.json()) as { available: boolean };
+        setNicknameStatus(data.available ? 'available' : 'taken');
+      } else {
+        setNicknameStatus('idle');
+      }
+    } catch {
+      setNicknameStatus('idle');
     }
   }, []);
 
@@ -77,29 +89,34 @@ export default function RegisterPage() {
         body['guest_token'] = token;
       }
 
-      const resp = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      try {
+        const resp = await fetch(`${API_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
 
-      if (resp.ok) {
-        const data = (await resp.json()) as { token: string };
-        setRegistrationToken(null);
-        setToken(data.token);
-        navigate('/', { replace: true });
-      } else {
-        const data = (await resp.json()) as {
-          error?: string;
-          errors?: Record<string, string[]>;
-        };
-        setError(
-          data.error ??
-            Object.values(data.errors ?? {})
-              .flat()
-              .join(', ') ??
-            'Registration failed'
-        );
+        if (resp.ok) {
+          const data = (await resp.json()) as { token: string };
+          setRegistrationToken(null);
+          setToken(data.token);
+          navigate('/', { replace: true });
+        } else {
+          const data = (await resp.json()) as {
+            error?: string;
+            errors?: Record<string, string[]>;
+          };
+          setError(
+            data.error ??
+              Object.values(data.errors ?? {})
+                .flat()
+                .join(', ') ??
+              'Registration failed'
+          );
+          setSubmitting(false);
+        }
+      } catch {
+        setError('Network error. Please try again.');
         setSubmitting(false);
       }
     },

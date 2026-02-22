@@ -47,6 +47,7 @@ defmodule Platform.Accounts.User do
       :display_name,
       :nickname
     ])
+    |> unique_constraint([:provider, :provider_id])
     |> validate_nickname()
   end
 
