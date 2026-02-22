@@ -35,4 +35,9 @@ config :tetris, Platform.Streaming,
   stream_name: "GAME_EVENTS",
   stream_subjects: ["game.>"]
 
+# Nx: use EXLA backend for JIT-compiled tensor operations.
+# NOTE: startup on first request is slow due the fact it needs to compile
+# on start, so give dummy input on init so it warms up.
+config :nx, :default_backend, EXLA.Backend
+
 import_config "#{config_env()}.exs"

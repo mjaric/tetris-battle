@@ -24,3 +24,6 @@ config :ueberauth, Ueberauth,
   ]
 
 config :tetris, Platform.Streaming, enabled: false
+
+# Nx: use `BinaryBackend` in tests (faster startup, no XLA compilation overhead for small tensors)
+config :nx, :default_backend, Nx.BinaryBackend

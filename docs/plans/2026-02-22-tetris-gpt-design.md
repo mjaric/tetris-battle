@@ -177,8 +177,8 @@ Input: {batch, 64, 80}
   ↓
   ╔══════════════════════════╗
   ║ Decoder Block 1          ║
-  ║  LayerNorm → MHA → +res ║
-  ║  LayerNorm → FFN → +res ║
+  ║  LayerNorm → MHA → +res  ║
+  ║  LayerNorm → FFN → +res  ║
   ║  Dropout(0.1)            ║
   ╠══════════════════════════╣
   ║ Decoder Block 2          ║
