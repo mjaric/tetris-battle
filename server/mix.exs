@@ -51,7 +51,8 @@ defmodule Tetris.MixProject do
       {:nx, "~> 0.10"},
       {:axon, "~> 0.8"},
       {:exla, "~> 0.10"},
-      {:polaris, "~> 0.1"}
+      {:polaris, "~> 0.1"},
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -64,6 +65,14 @@ defmodule Tetris.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        "test.watch": :test
+      ]
     ]
   end
 end

@@ -493,18 +493,26 @@ placements. Players eliminated early were making poor decisions — training on
 their data would teach bad strategy.
 
 **Data volume after windowing**: 100 games × 4 players × ~57 windows ≈ 22,800
-training sequences. Each sequence is {64, 80} floats = 20KB. Total dataset:
+training sequences. Each sequence is a map of structured tensors (board
+`{64, 200}`, pieces `{64}`, battle context `{64, 8}`, etc.). Total dataset:
 ~450MB (manageable on disk and in memory).
 
 ### Phase 3: Tensor Batching
 
-Sequences are grouped into batches of 32 for training:
+Sequences are grouped into batches of 32 for training. The tokenizer produces
+**structured tensors** (not a flat feature vector) — dimensionality reduction
+(board 200→48, pieces 7→8, placements 40→8) happens inside the model via
+learned Linear layers and Embedding tables:
 
 ```
-train_batch:
-  input:  {32, 64, 80}    float32  (32 sequences, 64 tokens, 80 features)
-  target: {32, 64}         int32    (placement indices)
-  mask:   {32, 64}         float32  (1.0 for real positions, 0.0 for padding)
+train_batch (map of named tensors):
+  "board":          {32, 64, 200}  float32  (binary board grids)
+  "current_piece":  {32, 64}       int32    (piece type indices 0-6)
+  "next_piece":     {32, 64}       int32    (piece type indices 0-6)
+  "battle_context": {32, 64, 8}    float32  (normalized battle features)
+  "placement":      {32, 64}       int32    (placement indices 0-39)
+  "mask":           {32, 64}       float32  (1.0 real, 0.0 padding)
+  target:           {32, 64}       int32    (placement indices for loss)
 ```
 
 Train/validation split: 90/10 (random, but keeping all windows from the same

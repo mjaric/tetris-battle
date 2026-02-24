@@ -1,31 +1,74 @@
 defmodule TetrisGpt.Model.Tokenizer do
   @moduledoc """
-  Converts raw game state into tensors for the transformer model.
+  Converts raw game state into structured tensors for the transformer.
 
-  Each game timestep becomes an 80-element float32 vector:
-    - Board: 20x10 binary grid, flattened (200 → kept as 200 in raw form)
-    - Current piece: integer index 0-6
-    - Next piece: integer index 0-6
-    - Battle context: 8 normalized floats
-    - Placement action: integer index 0-39
+  The tokenizer produces a map of separate tensors — one per input
+  type — that map directly to the model's named Axon inputs.
+  Dimensionality reduction (board 200→48, piece 7→8, placement
+  40→8) happens INSIDE the model via learned Linear/Embedding
+  layers, not here.
 
-  The raw 80-feature vector is composed as:
-    [board(200) | current_piece(1) | next_piece(1) |
-     battle_context(8) | placement(1)]
-  totaling 210 raw features. However, piece and placement indices
-  are stored separately for embedding lookup. The 80-feature
-  "token" is assembled after embedding projection inside the model.
+  Tokenizer output for a sequence of length `seq_len`:
 
-  For the tokenizer output consumed by the model input pipeline:
-    - board_flat: {seq_len, 200} float32
-    - current_piece: {seq_len} int32
-    - next_piece: {seq_len} int32
-    - battle_context: {seq_len, 8} float32
-    - placement: {seq_len} int32
-    - mask: {seq_len} float32
+      %{
+        "board"          => {seq_len, 200}  float32
+        "current_piece"  => {seq_len}       int32
+        "next_piece"     => {seq_len}       int32
+        "battle_context" => {seq_len, 8}    float32
+        "placement"      => {seq_len}       int32
+        "mask"           => {seq_len}       float32
+      }
   """
-
+  @type piece :: :I | :O | :T | :S | :Z | :J | :L
   @type board :: list(list(String.t()))
+  @type rotation :: 0 | 1 | 2 | 3
+  @type column :: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+  @type placement_index :: non_neg_integer()
+  @type placement :: %{rotation: rotation(), column: column()}
+  @type battle_context :: %{
+          pending_garbage_count: non_neg_integer(),
+          own_max_height: non_neg_integer(),
+          opponent_max_height: non_neg_integer(),
+          combo_count: non_neg_integer(),
+          lines: non_neg_integer(),
+          score_diff: non_neg_integer(),
+          opponent_count: non_neg_integer(),
+          alive: boolean()
+        }
+  @type timestep :: %{
+          board: board,
+          current_piece: piece(),
+          next_piece: piece(),
+          battle_context: battle_context(),
+          placement: placement()
+        }
+
+  # Normalization constants for battle context features.
+  # Each value is the practical maximum for that feature,
+  # used to scale inputs to roughly [0, 1] for the model.
+
+  # Max garbage rows that can accumulate before a piece locks.
+  # 3 opponents × 3 rows each (from 4-line clears) ≈ 9-12.
+  @max_pending_garbage 12.0
+
+  # Board height in rows. Column heights range 0-20.
+  @board_height 20.0
+
+  # Consecutive line clears beyond 10 are extremely rare.
+  @max_combo 10.0
+
+  # Typical battle games end well before 100 total lines.
+  @max_lines 100.0
+
+  # Controls tanh sensitivity for unbounded score difference.
+  # 1000-point lead → ~0.76, ±3000 saturates near ±1.
+  @score_diff_scale 1000.0
+
+  # 4-player game → max 3 opponents.
+  @max_opponents 3.0
+
+  @piece_types [:I, :O, :T, :S, :Z, :J, :L]
+  @piece_to_index Map.new(Enum.with_index(@piece_types))
 
   @doc "Number of distinct piece types."
   @spec num_piece_types() :: non_neg_integer()
@@ -47,5 +90,138 @@ defmodule TetrisGpt.Model.Tokenizer do
     |> List.flatten()
     |> Enum.map(fn cell -> if cell == nil, do: 0.0, else: 1.0 end)
     |> Nx.tensor(type: :f32)
+  end
+
+  @doc "Map piece atom to integer index 0-6."
+  @spec piece_index(atom) :: non_neg_integer()
+  def piece_index(type) when type in @piece_types do
+    Map.fetch!(@piece_to_index, type)
+  end
+
+  @doc "Encode placement as single index: rotation * 10 + column."
+  @spec placement_index(rotation(), column()) :: non_neg_integer()
+  def placement_index(rotation, column)
+      when rotation in 0..3 and column in 0..9 do
+    rotation * 10 + column
+  end
+
+  @doc "Decode placement index back to {rotation, column}."
+  @spec decode_placement(index :: placement_index) :: placement()
+  def decode_placement(index) when index in 0..39 do
+    %{rotation: div(index, 10), column: rem(index, 10)}
+  end
+
+  @doc """
+  Encode battle context map to {8} normalized tensor.
+
+  All values scaled to roughly [-1, 1] range.
+  """
+  @spec encode_battle_context(ctx :: TetrisGpt.Strategy.context()) :: Nx.Tensor.t()
+  def encode_battle_context(ctx) do
+    Nx.tensor(
+      [
+        (ctx[:pending_garbage_count] || 0) / @max_pending_garbage,
+        (ctx[:own_max_height] || 0) / @board_height,
+        (ctx[:opponent_max_height] || 0) / @board_height,
+        (ctx[:combo_count] || 0) / @max_combo,
+        (ctx[:lines] || 0) / @max_lines,
+        :math.tanh((ctx[:score_diff] || 0) / @score_diff_scale),
+        (ctx[:opponent_count] || 0) / @max_opponents,
+        if(ctx[:alive] == false, do: 0.0, else: 1.0)
+      ],
+      type: :f32
+    )
+  end
+
+  @doc """
+  Encode a list of timesteps into a structured tensor map.
+
+  ## Returns
+
+  Returns a map of named tensors matching the model's Axon inputs:
+
+  ```elixir
+    %{
+      "board"          => {seq_len, 200},  # float32
+      "current_piece"  => {seq_len},       # int32
+      "next_piece"     => {seq_len},       # int32
+      "battle_context" => {seq_len, 8},    # float32
+      "placement"      => {seq_len},       # int32
+      "mask"           => {seq_len}        # float32
+    }
+  ```
+
+  Sequences shorter than `seq_len` are left-padded with zeros.
+  Sequences longer than `seq_len` are truncated (keep most recent).
+
+  ## Options
+
+    * `:seq_len` - target sequence length (default: 64)
+  """
+  @spec encode_structured_sequence([timestep()], keyword()) :: %{
+          String.t() => Nx.Tensor.t()
+        }
+  def encode_structured_sequence(timesteps, opts \\ []) do
+    seq_len = Keyword.get(opts, :seq_len, 64)
+
+    recent = Enum.take(timesteps, -seq_len)
+    actual_len = length(recent)
+    pad_len = seq_len - actual_len
+
+    boards = Enum.map(recent, fn ts -> encode_board(ts.board) end)
+
+    current_pieces =
+      Enum.map(recent, fn ts -> piece_index(ts.current_piece) end)
+
+    next_pieces =
+      Enum.map(recent, fn ts -> piece_index(ts.next_piece) end)
+
+    battle_contexts =
+      Enum.map(recent, fn ts ->
+        encode_battle_context(ts.battle_context)
+      end)
+
+    placements =
+      Enum.map(recent, fn ts ->
+        placement_index(ts.placement.rotation, ts.placement.column)
+      end)
+
+    pad_board = Nx.broadcast(0.0, {200})
+    pad_battle = Nx.broadcast(0.0, {8})
+
+    board_tensor =
+      (List.duplicate(pad_board, pad_len) ++ boards)
+      |> Nx.stack()
+
+    current_piece_tensor =
+      (List.duplicate(0, pad_len) ++ current_pieces)
+      |> Nx.tensor(type: :s32)
+
+    next_piece_tensor =
+      (List.duplicate(0, pad_len) ++ next_pieces)
+      |> Nx.tensor(type: :s32)
+
+    battle_context_tensor =
+      (List.duplicate(pad_battle, pad_len) ++ battle_contexts)
+      |> Nx.stack()
+
+    placement_tensor =
+      (List.duplicate(0, pad_len) ++ placements)
+      |> Nx.tensor(type: :s32)
+
+    mask_list =
+      List.duplicate(0.0, pad_len) ++
+        List.duplicate(1.0, actual_len)
+
+    mask_tensor = Nx.tensor(mask_list, type: :f32)
+
+    %{
+      "board" => board_tensor,
+      "current_piece" => current_piece_tensor,
+      "next_piece" => next_piece_tensor,
+      "battle_context" => battle_context_tensor,
+      "placement" => placement_tensor,
+      "mask" => mask_tensor
+    }
   end
 end
