@@ -114,7 +114,15 @@ defmodule TetrisGpt.Model.Tokenizer do
   @doc """
   Encode battle context map to {8} normalized tensor.
 
-  All values scaled to roughly [-1, 1] range.
+  All values scaled to roughly [-1, 1] range:
+    0: pending_garbage_count / 12  (max practical garbage queue)
+    1: own_max_height / 20         (board height)
+    2: opponent_max_height / 20    (board height)
+    3: combo_count / 10            (max practical combo)
+    4: lines / 100                 (game progress)
+    5: tanh(score_diff / 1000)     (relative standing, squashed)
+    6: opponent_count / 3          (max opponents in 4-player)
+    7: alive (0.0 or 1.0)         (binary flag)
   """
   @spec encode_battle_context(ctx :: TetrisGpt.Strategy.context()) :: Nx.Tensor.t()
   def encode_battle_context(ctx) do
