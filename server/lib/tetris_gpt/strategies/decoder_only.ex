@@ -29,7 +29,7 @@ defmodule TetrisGpt.Strategies.DecoderOnly do
       case Keyword.get(opts, :checkpoint) do
         nil ->
           dummy_input = dummy_input(config)
-          init_fn.(dummy_input, %{})
+          init_fn.(dummy_input, Axon.ModelState.empty())
 
         path ->
           Trainer.load_params(path)
