@@ -44,11 +44,11 @@ defmodule TetrisGpt.Training.DataPipelineTest do
 
       [{input_map, target, mask} | _] = sequences
 
-      assert Nx.shape(input_map[:board]) == {4, 200}
-      assert Nx.shape(input_map[:current_piece]) == {4}
-      assert Nx.shape(input_map[:next_piece]) == {4}
-      assert Nx.shape(input_map[:battle_context]) == {4, 8}
-      assert Nx.shape(input_map[:placement]) == {4}
+      assert Nx.shape(input_map["board"]) == {4, 200}
+      assert Nx.shape(input_map["current_piece"]) == {4}
+      assert Nx.shape(input_map["next_piece"]) == {4}
+      assert Nx.shape(input_map["battle_context"]) == {4, 8}
+      assert Nx.shape(input_map["placement"]) == {4}
       assert Nx.shape(target) == {4}
       assert Nx.shape(mask) == {4}
     end
@@ -78,14 +78,14 @@ defmodule TetrisGpt.Training.DataPipelineTest do
       batches =
         DataPipeline.batch_sequences(sequences, batch_size: 4)
 
-      assert length(batches) > 0
+      assert batches != []
 
       [{input_batch, target_batch, mask_batch} | _] = batches
-      assert Nx.shape(input_batch[:board]) == {4, 4, 200}
-      assert Nx.shape(input_batch[:current_piece]) == {4, 4}
-      assert Nx.shape(input_batch[:next_piece]) == {4, 4}
-      assert Nx.shape(input_batch[:battle_context]) == {4, 4, 8}
-      assert Nx.shape(input_batch[:placement]) == {4, 4}
+      assert Nx.shape(input_batch["board"]) == {4, 4, 200}
+      assert Nx.shape(input_batch["current_piece"]) == {4, 4}
+      assert Nx.shape(input_batch["next_piece"]) == {4, 4}
+      assert Nx.shape(input_batch["battle_context"]) == {4, 4, 8}
+      assert Nx.shape(input_batch["placement"]) == {4, 4}
       assert Nx.shape(target_batch) == {4, 4}
       assert Nx.shape(mask_batch) == {4, 4}
     end

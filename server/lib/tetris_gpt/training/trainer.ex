@@ -29,11 +29,16 @@ defmodule TetrisGpt.Training.Trainer do
   def train(model, train_data, opts \\ []) do
     epochs = Keyword.get(opts, :epochs, 50)
     lr = Keyword.get(opts, :learning_rate, 3.0e-4)
+    iterations = Keyword.get(opts, :iterations)
 
     initial_params =
       Keyword.get(opts, :initial_params, Axon.ModelState.empty())
 
     optimizer = Polaris.Optimizers.adam(learning_rate: lr)
+
+    run_opts =
+      [epochs: epochs] ++
+        if(iterations, do: [iterations: iterations], else: [])
 
     model
     |> Axon.Loop.trainer(
@@ -41,7 +46,7 @@ defmodule TetrisGpt.Training.Trainer do
       optimizer,
       log: 1
     )
-    |> Axon.Loop.run(train_data, initial_params, epochs: epochs)
+    |> Axon.Loop.run(train_data, initial_params, run_opts)
   end
 
   @doc "Save model parameters to a file."

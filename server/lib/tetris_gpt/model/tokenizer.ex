@@ -231,12 +231,12 @@ defmodule TetrisGpt.Model.Tokenizer do
     mask_tensor = Nx.tensor(mask_list, type: :f32)
 
     %{
-      board: board_tensor,
-      current_piece: current_piece_tensor,
-      next_piece: next_piece_tensor,
-      battle_context: battle_context_tensor,
-      placement: placement_tensor,
-      mask: mask_tensor
+      "board" => board_tensor,
+      "current_piece" => current_piece_tensor,
+      "next_piece" => next_piece_tensor,
+      "battle_context" => battle_context_tensor,
+      "placement" => placement_tensor,
+      "mask" => mask_tensor
     }
   end
 end

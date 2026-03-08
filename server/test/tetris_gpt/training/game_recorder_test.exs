@@ -16,7 +16,7 @@ defmodule TetrisGpt.Training.GameRecorderTest do
 
       Enum.each(replay.players, fn {_id, timeline} ->
         assert is_list(timeline)
-        assert length(timeline) > 0
+        assert timeline != []
 
         first = hd(timeline)
         assert Map.has_key?(first, :board)

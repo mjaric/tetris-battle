@@ -26,7 +26,7 @@ defmodule Mix.Tasks.TetrisGpt.Record do
 
   @impl Mix.Task
   def run(args) do
-    Mix.Task.run("compile")
+    {:ok, _} = Application.ensure_all_started(:exla)
 
     {opts, _, _} =
       OptionParser.parse(args,

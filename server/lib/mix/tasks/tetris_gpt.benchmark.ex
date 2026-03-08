@@ -30,7 +30,7 @@ defmodule Mix.Tasks.TetrisGpt.Benchmark do
 
   @impl Mix.Task
   def run(args) do
-    Mix.Task.run("compile")
+    {:ok, _} = Application.ensure_all_started(:exla)
 
     {opts, _, _} =
       OptionParser.parse(args, switches: @switches)
@@ -51,11 +51,9 @@ defmodule Mix.Tasks.TetrisGpt.Benchmark do
         "(#{num_games} games)..."
     )
 
-    # TODO: Implement battle simulation with TetrisGpt as
-    # player 0 and heuristic bots as opponents.
     Logger.info(
-      "Benchmark implementation pending " <>
-        "- model loads successfully"
+      "Model loaded. Battle simulation not yet implemented " <>
+        "- model checkpoint is valid."
     )
   end
 end

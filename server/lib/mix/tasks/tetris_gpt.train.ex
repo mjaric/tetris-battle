@@ -36,7 +36,7 @@ defmodule Mix.Tasks.TetrisGpt.Train do
 
   @impl Mix.Task
   def run(args) do
-    Mix.Task.run("compile")
+    {:ok, _} = Application.ensure_all_started(:exla)
 
     {opts, _, _} =
       OptionParser.parse(args, switches: @switches)
@@ -90,7 +90,8 @@ defmodule Mix.Tasks.TetrisGpt.Train do
         model,
         train_data,
         epochs: epochs,
-        learning_rate: lr
+        learning_rate: lr,
+        iterations: length(batches)
       )
 
     File.mkdir_p!(output_dir)

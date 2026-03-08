@@ -1,8 +1,8 @@
 defmodule TetrisGpt.Training.TrainerTest do
   use ExUnit.Case, async: true
 
-  alias TetrisGpt.Training.Trainer
   alias TetrisGpt.Model.Transformer
+  alias TetrisGpt.Training.Trainer
 
   @test_config %{
     d_model: 16,

@@ -72,12 +72,12 @@ defmodule TetrisGpt.Training.DataPipeline do
   defp sliding_windows(timeline, seq_len)
        when length(timeline) < seq_len do
     input_map =
-      Tokenizer.encode_structured_sequence(timeline,
-        seq_len: seq_len
-      )
+      timeline
+      |> Tokenizer.encode_structured_sequence(seq_len: seq_len)
+      |> transfer_map()
 
     targets = extract_targets(timeline, seq_len)
-    [{input_map, targets, input_map[:mask]}]
+    [{input_map, targets, input_map["mask"]}]
   end
 
   defp sliding_windows(timeline, seq_len) do
@@ -86,12 +86,18 @@ defmodule TetrisGpt.Training.DataPipeline do
     |> Enum.filter(fn chunk -> length(chunk) == seq_len end)
     |> Enum.map(fn window ->
       input_map =
-        Tokenizer.encode_structured_sequence(window,
-          seq_len: seq_len
-        )
+        window
+        |> Tokenizer.encode_structured_sequence(seq_len: seq_len)
+        |> transfer_map()
 
       targets = extract_targets(window, seq_len)
-      {input_map, targets, input_map[:mask]}
+      {input_map, targets, input_map["mask"]}
+    end)
+  end
+
+  defp transfer_map(tensor_map) do
+    Map.new(tensor_map, fn {k, v} ->
+      {k, Nx.backend_transfer(v, Nx.BinaryBackend)}
     end)
   end
 
@@ -109,7 +115,7 @@ defmodule TetrisGpt.Training.DataPipeline do
 
     target_indices
     |> Enum.take(-seq_len)
-    |> Nx.tensor(type: :s32)
+    |> Nx.tensor(type: :s32, backend: Nx.BinaryBackend)
   end
 
   defp stack_input_maps(maps) do

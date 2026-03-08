@@ -110,15 +110,15 @@ defmodule TetrisGpt.Model.TokenizerTest do
           seq_len: 4
         )
 
-      assert Nx.shape(result[:board]) == {4, 200}
-      assert Nx.shape(result[:current_piece]) == {4}
-      assert Nx.shape(result[:next_piece]) == {4}
-      assert Nx.shape(result[:battle_context]) == {4, 8}
-      assert Nx.shape(result[:placement]) == {4}
-      assert Nx.shape(result[:mask]) == {4}
+      assert Nx.shape(result["board"]) == {4, 200}
+      assert Nx.shape(result["current_piece"]) == {4}
+      assert Nx.shape(result["next_piece"]) == {4}
+      assert Nx.shape(result["battle_context"]) == {4, 8}
+      assert Nx.shape(result["placement"]) == {4}
+      assert Nx.shape(result["mask"]) == {4}
 
       # Only last position should be unmasked
-      assert Nx.to_flat_list(result[:mask]) == [0.0, 0.0, 0.0, 1.0]
+      assert Nx.to_flat_list(result["mask"]) == [0.0, 0.0, 0.0, 1.0]
     end
 
     test "truncates long sequences to seq_len" do
@@ -130,10 +130,10 @@ defmodule TetrisGpt.Model.TokenizerTest do
           seq_len: 4
         )
 
-      assert Nx.shape(result[:board]) == {4, 200}
-      assert Nx.shape(result[:current_piece]) == {4}
+      assert Nx.shape(result["board"]) == {4, 200}
+      assert Nx.shape(result["current_piece"]) == {4}
       # All positions should be unmasked (no padding needed)
-      assert Nx.to_flat_list(result[:mask]) == [1.0, 1.0, 1.0, 1.0]
+      assert Nx.to_flat_list(result["mask"]) == [1.0, 1.0, 1.0, 1.0]
     end
 
     test "piece and placement indices are correct" do
@@ -143,13 +143,13 @@ defmodule TetrisGpt.Model.TokenizerTest do
           seq_len: 1
         )
 
-      assert Nx.to_number(result[:current_piece][0]) ==
+      assert Nx.to_number(result["current_piece"][0]) ==
                Tokenizer.piece_index(:S)
 
-      assert Nx.to_number(result[:next_piece][0]) ==
+      assert Nx.to_number(result["next_piece"][0]) ==
                Tokenizer.piece_index(:Z)
 
-      assert Nx.to_number(result[:placement][0]) ==
+      assert Nx.to_number(result["placement"][0]) ==
                Tokenizer.placement_index(2, 7)
     end
   end

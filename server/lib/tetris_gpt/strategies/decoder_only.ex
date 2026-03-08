@@ -57,11 +57,10 @@ defmodule TetrisGpt.Strategies.DecoderOnly do
     history =
       Enum.take(state.history ++ [timestep], -@max_history)
 
-    # Encode and convert atom keys to string keys for Axon
+    # Encode and add batch dimension for Axon
     input_map =
       history
       |> Tokenizer.encode_structured_sequence(seq_len: state.config.max_seq_len)
-      |> to_string_keys()
       |> add_batch_dim()
 
     # Run inference
@@ -85,10 +84,6 @@ defmodule TetrisGpt.Strategies.DecoderOnly do
     final_history = List.replace_at(history, -1, updated_timestep)
 
     {placement, %{state | history: final_history}}
-  end
-
-  defp to_string_keys(map) do
-    Map.new(map, fn {k, v} -> {Atom.to_string(k), v} end)
   end
 
   defp add_batch_dim(map) do
