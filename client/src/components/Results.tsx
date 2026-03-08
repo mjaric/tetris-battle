@@ -44,6 +44,7 @@ export default function Results({ gameState, onBack }: ResultsProps) {
                 </Badge>
                 <Avatar name={p.nickname} size="sm" />
                 <span className="font-display font-bold text-text-primary">{p.nickname}</span>
+                {p.bot_difficulty && <Badge variant="bot">{p.bot_difficulty.toUpperCase()}</Badge>}
               </div>
               <div className="flex items-center gap-4">
                 <Stat label="Score" value={(p.score ?? 0).toLocaleString()} />

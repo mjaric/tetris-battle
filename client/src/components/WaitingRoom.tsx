@@ -3,7 +3,7 @@ import type { Channel } from 'phoenix';
 import type { GameState } from '../types.ts';
 import { GlassCard, Button, Badge, Avatar, Divider, PageTransition } from './ui/index.ts';
 
-type Difficulty = 'easy' | 'medium' | 'hard' | 'battle';
+type Difficulty = 'easy' | 'medium' | 'hard' | 'battle' | 'gpt';
 
 interface WaitingRoomProps {
   gameState: GameState | null;
@@ -42,7 +42,7 @@ export default function WaitingRoom({ gameState, isHost, startGame, onLeave, cha
               <div className="flex items-center gap-2">
                 <Avatar name={p.nickname} size="sm" />
                 <span className="font-body text-sm text-text-primary">{p.nickname}</span>
-                {p.is_bot && <Badge variant="bot">BOT</Badge>}
+                {p.is_bot && <Badge variant="bot">{p.bot_difficulty ? p.bot_difficulty.toUpperCase() : 'BOT'}</Badge>}
               </div>
               <div className="flex items-center gap-2">
                 {gameState && id === gameState.host && <Badge variant="rank">HOST</Badge>}
@@ -70,6 +70,7 @@ export default function WaitingRoom({ gameState, isHost, startGame, onLeave, cha
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
               <option value="battle">Battle</option>
+              <option value="gpt">GPT</option>
             </select>
             <Button variant="secondary" size="sm" onClick={addBot}>
               Add Bot

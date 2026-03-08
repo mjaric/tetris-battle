@@ -35,4 +35,17 @@ config :tetris, Platform.Streaming,
   stream_name: "GAME_EVENTS",
   stream_subjects: ["game.>"]
 
+# Nx: BinaryBackend for regular tensor ops (no process overhead).
+# EXLA compiles defn functions (training, inference) via JIT.
+config :nx, :default_backend, Nx.BinaryBackend
+config :nx, :default_defn_options, compiler: EXLA
+
+# XLA pre-allocates ~90% of GPU VRAM by default.
+# Our model is ~110K params — cap at 5% (~1.2GB on a 24GB GPU).
+config :exla, :clients,
+  cuda: [platform: :cuda, preallocate: false],
+  rocm: [platform: :rocm],
+  tpu: [platform: :tpu],
+  host: [platform: :host]
+
 import_config "#{config_env()}.exs"

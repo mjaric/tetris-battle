@@ -28,3 +28,4 @@ yarn-error.log*
 .claude/*.local.json
 .mcp.json
 tmp/
+server/priv/tetris_gpt/data/

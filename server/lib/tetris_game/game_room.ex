@@ -32,6 +32,7 @@ defmodule TetrisGame.GameRoom do
     :tick_timer,
     :bot_ids,
     :bot_pids,
+    :bot_difficulties,
     :started_at
   ]
 
@@ -48,6 +49,7 @@ defmodule TetrisGame.GameRoom do
           tick_timer: reference() | nil,
           bot_ids: MapSet.t(),
           bot_pids: %{String.t() => pid()},
+          bot_difficulties: %{String.t() => atom()},
           started_at: DateTime.t() | nil
         }
 
@@ -168,6 +170,7 @@ defmodule TetrisGame.GameRoom do
       tick_timer: nil,
       bot_ids: MapSet.new(),
       bot_pids: %{},
+      bot_difficulties: %{},
       started_at: nil
     }
 
@@ -301,6 +304,19 @@ defmodule TetrisGame.GameRoom do
           room_pid: self()
         ]
 
+        bot_opts =
+          if difficulty == :gpt do
+            Keyword.merge(bot_opts,
+              bot_module: TetrisGpt.GptBotPlayer,
+              strategy: TetrisGpt.Strategies.DecoderOnly,
+              strategy_opts: [
+                checkpoint: gpt_checkpoint_path()
+              ]
+            )
+          else
+            bot_opts
+          end
+
         case BotSupervisor.start_bot(bot_opts) do
           {:ok, bot_pid} ->
             Process.monitor(bot_pid)
@@ -310,7 +326,8 @@ defmodule TetrisGame.GameRoom do
               | players: Map.put(state.players, bot_id, player),
                 player_order: state.player_order ++ [bot_id],
                 bot_ids: MapSet.put(state.bot_ids, bot_id),
-                bot_pids: Map.put(state.bot_pids, bot_id, bot_pid)
+                bot_pids: Map.put(state.bot_pids, bot_id, bot_pid),
+                bot_difficulties: Map.put(state.bot_difficulties, bot_id, difficulty)
             }
 
             Lobby.update_room(
@@ -347,7 +364,8 @@ defmodule TetrisGame.GameRoom do
           | players: Map.delete(state.players, bot_id),
             player_order: List.delete(state.player_order, bot_id),
             bot_ids: MapSet.delete(state.bot_ids, bot_id),
-            bot_pids: Map.delete(state.bot_pids, bot_id)
+            bot_pids: Map.delete(state.bot_pids, bot_id),
+            bot_difficulties: Map.delete(state.bot_difficulties, bot_id)
         }
 
         Lobby.update_room(
@@ -436,7 +454,8 @@ defmodule TetrisGame.GameRoom do
               | players: Map.delete(state.players, bot_id),
                 player_order: List.delete(state.player_order, bot_id),
                 bot_ids: MapSet.delete(state.bot_ids, bot_id),
-                bot_pids: Map.delete(state.bot_pids, bot_id)
+                bot_pids: Map.delete(state.bot_pids, bot_id),
+                bot_difficulties: Map.delete(state.bot_difficulties, bot_id)
             }
           else
             %{
@@ -822,6 +841,7 @@ defmodule TetrisGame.GameRoom do
   """
   def build_broadcast_payload(state) do
     bot_ids = state.bot_ids || MapSet.new()
+    bot_difficulties = state.bot_difficulties || %{}
 
     %{
       tick: state.tick,
@@ -831,6 +851,13 @@ defmodule TetrisGame.GameRoom do
         Map.new(state.players, fn {player_id, player} ->
           broadcast = PlayerState.to_broadcast(player)
           broadcast = Map.put(broadcast, :is_bot, MapSet.member?(bot_ids, player_id))
+
+          broadcast =
+            case Map.get(bot_difficulties, player_id) do
+              nil -> broadcast
+              diff -> Map.put(broadcast, :bot_difficulty, diff)
+            end
+
           {player_id, broadcast}
         end),
       eliminated_order: state.eliminated_order
@@ -914,6 +941,13 @@ defmodule TetrisGame.GameRoom do
 
   defp schedule_tick do
     Process.send_after(self(), :tick, @tick_interval)
+  end
+
+  @default_gpt_checkpoint "priv/tetris_gpt/checkpoints/final_params.nx"
+
+  defp gpt_checkpoint_path do
+    path = Application.get_env(:tetris, :gpt_checkpoint, @default_gpt_checkpoint)
+    if File.exists?(path), do: path
   end
 
   # -- NATS Event Publishing --

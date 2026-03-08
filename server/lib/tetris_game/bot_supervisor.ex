@@ -19,9 +19,11 @@ defmodule TetrisGame.BotSupervisor do
   """
   @spec start_bot(keyword()) :: DynamicSupervisor.on_start_child()
   def start_bot(opts) do
+    bot_module = Keyword.get(opts, :bot_module, TetrisGame.BotPlayer)
+
     spec = %{
       id: Keyword.fetch!(opts, :bot_id),
-      start: {TetrisGame.BotPlayer, :start_link, [opts]},
+      start: {bot_module, :start_link, [opts]},
       restart: :temporary
     }
 

@@ -22,6 +22,7 @@ interface PlayerBoardProps {
   latency?: number | null | undefined;
   events?: GameEvent[];
   dangerLevel?: DangerLevel;
+  botDifficulty?: string | undefined;
 }
 
 interface PlayerCellProps {
@@ -224,6 +225,35 @@ function HudStat({
   );
 }
 
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: '#00b894',
+  medium: '#ffa502',
+  hard: '#ff4757',
+  battle: '#e056fd',
+  gpt: '#00f0f0',
+};
+
+function DifficultyBadge({ difficulty, fontSize }: { difficulty: string; fontSize: number }) {
+  const color = DIFFICULTY_COLORS[difficulty] ?? '#888';
+  return (
+    <span
+      style={{
+        fontSize: Math.max(6, fontSize - 3),
+        color,
+        border: `1px solid ${color}66`,
+        borderRadius: 3,
+        padding: '1px 4px',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        fontWeight: 'bold',
+        flexShrink: 0,
+      }}
+    >
+      {difficulty}
+    </span>
+  );
+}
+
 function tintAlpha(level: GlowLevel): number {
   switch (level) {
     case 'self':
@@ -273,6 +303,7 @@ const PlayerBoard = memo(
     latency,
     events = [],
     dangerLevel = 'none',
+    botDifficulty,
   }: PlayerBoardProps) {
     const { boardClassName, overlays, dangerClassName, garbageMeterPulse } = useAnimations(events, dangerLevel, isMe);
     const fontSize = Math.max(8, Math.round(cellSize * 0.4));
@@ -339,6 +370,7 @@ const PlayerBoard = memo(
                   {nickname}
                 </span>
               </div>
+              {botDifficulty && <DifficultyBadge difficulty={botDifficulty} fontSize={fontSize} />}
               {nextPiece && <MiniNextPiece piece={nextPiece} hudCell={hudCell} />}
             </div>
 
@@ -434,14 +466,24 @@ const PlayerBoard = memo(
           >
             <div
               style={{
-                fontWeight: 'bold',
-                color: `hsl(${String(playerHue)}, 70%, 70%)`,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
               }}
             >
-              {nickname}
+              <span
+                style={{
+                  fontWeight: 'bold',
+                  color: `hsl(${String(playerHue)}, 70%, 70%)`,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {nickname}
+              </span>
+              {botDifficulty && <DifficultyBadge difficulty={botDifficulty} fontSize={fontSize} />}
             </div>
             <div style={{ color: '#888' }}>
               {score} pts / {lines} lines
@@ -589,6 +631,7 @@ const PlayerBoard = memo(
     prev.latency === next.latency &&
     prev.dangerLevel === next.dangerLevel &&
     prev.nextPiece === next.nextPiece &&
+    prev.botDifficulty === next.botDifficulty &&
     eventsEqual(prev.events ?? [], next.events ?? [])
 );
 

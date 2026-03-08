@@ -12,10 +12,7 @@ defmodule Platform.Streaming.EventPublisher do
       subject = "game.#{room_id}.events"
       payload = Jason.encode!(event)
 
-      case Gnat.pub(Platform.Streaming.NatsConnection, subject, payload) do
-        :ok -> :ok
-        {:error, reason} -> {:error, reason}
-      end
+      Gnat.pub(Platform.Streaming.NatsConnection, subject, payload)
     else
       :ok
     end

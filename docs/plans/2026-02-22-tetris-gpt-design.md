@@ -32,7 +32,7 @@ DataPipeline         Attention            (GenServer)
  → tensors)                               GameRoom)
 ```
 
-A `TetrisGPT.Strategy` behaviour defines the interface between Agent and Model
+A `TetrisGpt.Strategy` behaviour defines the interface between Agent and Model
 layers, allowing different model implementations to be swapped without changing
 the agent.
 
@@ -177,8 +177,8 @@ Input: {batch, 64, 80}
   ↓
   ╔══════════════════════════╗
   ║ Decoder Block 1          ║
-  ║  LayerNorm → MHA → +res ║
-  ║  LayerNorm → FFN → +res ║
+  ║  LayerNorm → MHA → +res  ║
+  ║  LayerNorm → FFN → +res  ║
   ║  Dropout(0.1)            ║
   ╠══════════════════════════╣
   ║ Decoder Block 2          ║
@@ -203,7 +203,7 @@ Output: {batch, 64, 40} placement probabilities
 | `max_seq_len` | 64 | ~64 piece placements ≈ 2-5 minutes of game |
 | `dropout` | 0.1 | Light regularization |
 | `vocab_placements` | 40 | 4 rotations × 10 columns |
-| Total params | ~110K | Fast CPU inference (<20ms) |
+| Total params | ~121K | Fast CPU inference (<20ms) |
 
 ### Positional Encoding
 
@@ -433,7 +433,7 @@ Per decoder block:
 Final LayerNorm:       64 × 2                 =     128
 Output head:           64 × 40 + 40           =   2,600
 ─────────────────────────────────────────────────────────
-Total:                                        ≈ 112,408
+Total:                                        ≈ 121,000
 ```
 
 ## Training Data Pipeline
@@ -493,18 +493,26 @@ placements. Players eliminated early were making poor decisions — training on
 their data would teach bad strategy.
 
 **Data volume after windowing**: 100 games × 4 players × ~57 windows ≈ 22,800
-training sequences. Each sequence is {64, 80} floats = 20KB. Total dataset:
+training sequences. Each sequence is a map of structured tensors (board
+`{64, 200}`, pieces `{64}`, battle context `{64, 8}`, etc.). Total dataset:
 ~450MB (manageable on disk and in memory).
 
 ### Phase 3: Tensor Batching
 
-Sequences are grouped into batches of 32 for training:
+Sequences are grouped into batches of 32 for training. The tokenizer produces
+**structured tensors** (not a flat feature vector) — dimensionality reduction
+(board 200→48, pieces 7→8, placements 40→8) happens inside the model via
+learned Linear layers and Embedding tables:
 
 ```
-train_batch:
-  input:  {32, 64, 80}    float32  (32 sequences, 64 tokens, 80 features)
-  target: {32, 64}         int32    (placement indices)
-  mask:   {32, 64}         float32  (1.0 for real positions, 0.0 for padding)
+train_batch (map of named tensors):
+  "board":          {32, 64, 200}  float32  (binary board grids)
+  "current_piece":  {32, 64}       int32    (piece type indices 0-6)
+  "next_piece":     {32, 64}       int32    (piece type indices 0-6)
+  "battle_context": {32, 64, 8}    float32  (normalized battle features)
+  "placement":      {32, 64}       int32    (placement indices 0-39)
+  "mask":           {32, 64}       float32  (1.0 real, 0.0 padding)
+  target:           {32, 64}       int32    (placement indices for loss)
 ```
 
 Train/validation split: 90/10 (random, but keeping all windows from the same
@@ -572,104 +580,101 @@ accuracy is the more meaningful metric.
 
 ### GenServer Lifecycle
 
-`GptBotPlayer` mirrors the existing `BotPlayer` lifecycle exactly:
+`TetrisGpt.GptBotPlayer` mirrors the existing `BotPlayer` lifecycle:
 
 ```
 States: :waiting → :thinking → :executing → :thinking → ...
 
 Events:
-  {:game_started, _}        → enter :thinking
-  {:game_state, payload}    → buffer state, maybe trigger think
-  :think                    → run inference, plan actions
+  :game_started             → enter :thinking
+  {:game_state, payload}    → detect piece change, schedule :think
+  :think                    → run inference, plan actions, enter :executing
   :execute_action           → send next action to GameRoom
+  {:DOWN, ref, ...}         → room process died, stop bot
 ```
 
 ### State
 
 ```elixir
-%{
+%TetrisGpt.GptBotPlayer{
+  bot_id: String.t(),
+  nickname: String.t(),
   room_id: String.t(),
-  player_id: String.t(),
-  model_params: map(),              # Axon model parameters
-  model_state: term(),              # Strategy-specific state
-  strategy: module(),               # TetrisGPT.Strategy implementation
-  context_buffer: :queue.queue(),   # ring buffer of last 64 states
+  room_ref: reference(),            # Monitor on the room process
+  strategy_module: module(),        # TetrisGpt.Strategy implementation
+  strategy_state: term(),           # Strategy-specific state (includes history buffer)
   phase: :waiting | :thinking | :executing,
   action_queue: list(atom()),
-  think_timer: reference() | nil,
-  action_timer: reference() | nil
+  last_piece_id: term()             # Tracks piece changes to detect new pieces
 }
 ```
 
 ### Inference Flow
 
 ```
-1. New piece detected in game_state broadcast
-2. Append current state to context_buffer (drop oldest if >64)
-3. Encode context_buffer → {1, 64, 80} tensor
-4. Call strategy.predict(model_state, tensor) → placement logits
-5. Enumerate valid placements via BotStrategy.enumerate_placements/2
-6. Mask invalid logits → -infinity
-7. Argmax (or top-k sampling) → {rotation, column}
-8. BotStrategy.plan_actions/3 → [:rotate, :move_right, :hard_drop, ...]
-9. Queue actions, enter :executing, fire actions on timer
+1. New piece detected in game_state broadcast (piece_identifier changes)
+2. Schedule :think after 10ms, clear action queue, enter :thinking
+3. Build context map (board, pieces, battle context from room state)
+4. Call strategy_module.predict(strategy_state, context)
+   - Strategy appends timestep to history buffer (last 64 states)
+   - Encodes history via Tokenizer.encode_structured_sequence/2
+   - Runs transformer inference, gets 40 placement logits
+   - Masks invalid placements to -infinity via BotStrategy.enumerate_placements/2
+   - Argmax → {rotation, column}
+5. BotStrategy.plan_actions/3 → [:rotate, :move_right, :hard_drop, ...]
+6. Queue actions, enter :executing, fire actions on 50ms timer
 ```
 
 ### Timing
 
-The existing hard bot thinks for 50-100ms. The ~110K param model should infer
-in 5-15ms on CPU (with EXLA backend). This leaves headroom for scaling up the
-model later.
-
-Action execution uses the same configurable timer as existing bots (50ms per
-action for hard difficulty).
+The GptBotPlayer uses a 10ms delay before thinking (scheduling `:think`) and
+a fixed 50ms interval between action executions (`@action_interval 50`).
+The ~121K param model infers in 5-15ms on CPU with EXLA compilation.
 
 ## Strategy Behaviour
 
 ```elixir
-defmodule TetrisGPT.Strategy do
+defmodule TetrisGpt.Strategy do
+  @type placement :: %{rotation: 0..3, column: non_neg_integer()}
   @type state :: term()
   @type context :: %{
     board: Nx.Tensor.t(),
     current_piece: atom(),
     next_piece: atom(),
     battle_context: map(),
-    sequence: list(map())
+    history: list(map())
   }
-  @type placement :: %{rotation: 0..3, column: 0..9}
 
-  @callback init(opts :: keyword()) :: state
-  @callback predict(state, context) :: {placement, state}
   @callback name() :: String.t()
+  @callback init(opts :: keyword()) :: state()
+  @callback predict(state(), context()) :: {placement(), state()}
 end
 ```
 
-**Planned implementations:**
+**Implementations:**
 
-| Module | Architecture | Status |
-|--------|-------------|--------|
-| `TetrisGPT.Strategies.DecoderOnly` | GPT-style transformer | Build now |
-| `TetrisGPT.Strategies.CnnTransformer` | CNN encoder + transformer | Build later |
-| `TetrisGPT.Strategies.Heuristic` | Wrapper around existing BotStrategy | Build now (for benchmarking) |
+| Module | Architecture |
+|--------|-------------|
+| `TetrisGpt.Strategies.DecoderOnly` | GPT-style decoder-only transformer |
+| `TetrisGpt.Strategies.Heuristic` | Wrapper around existing BotStrategy (baseline for benchmarking) |
 
 ## Module Structure
 
 ```
 server/lib/tetris_gpt/
   strategy.ex                    # Behaviour definition
+  gpt_bot_player.ex              # GenServer (mirrors BotPlayer)
   strategies/
-    decoder_only.ex              # Transformer strategy (Approach A)
+    decoder_only.ex              # Transformer strategy
     heuristic.ex                 # BotStrategy wrapper for comparison
   model/
-    transformer.ex               # Builds Axon model graph
-    attention.ex                 # Multi-head + flash attention (Nx)
-    layers.ex                    # LayerNorm, FFN, positional encoding
+    transformer.ex               # Builds Axon model graph (includes FFN, LayerNorm, positional encoding)
+    attention.ex                 # Multi-head + flash attention (Nx defn)
     tokenizer.ex                 # Game state → tensor encoding
   training/
     game_recorder.ex             # Records bot-vs-bot replays
     data_pipeline.ex             # Replays → batched tensors
     trainer.ex                   # Axon.Loop training orchestration
-  gpt_bot_player.ex              # GenServer (mirrors BotPlayer)
 
 server/lib/mix/tasks/
   tetris_gpt.record.ex           # mix tetris_gpt.record --games 100
@@ -685,15 +690,17 @@ server/priv/tetris_gpt/
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `nx` | ~> 0.9 | Tensor operations and numerical computing |
-| `axon` | ~> 0.7 | Neural network definition and training |
-| `exla` | ~> 0.9 | XLA backend — JIT compiles Nx ops to native code |
+| `nx` | ~> 0.10 | Tensor operations and numerical computing |
+| `axon` | ~> 0.8 | Neural network definition and training |
+| `exla` | ~> 0.10 | XLA compiler — JIT compiles `defn` functions to native code |
 | `polaris` | ~> 0.1 | Optimizers (Adam) and LR schedulers |
 
-EXLA is the recommended Nx backend. It compiles tensor operations via Google's
-XLA compiler to optimized native code, giving 10-100x speedup over the default
-BinaryBackend, even on CPU. For our ~110K param model, EXLA makes the
-difference between 100ms inference (unusable) and 5-15ms (fast).
+The default Nx backend is `Nx.BinaryBackend` for regular tensor operations (fast
+startup, no process overhead). EXLA is configured as the `defn` compiler via
+`config :nx, :default_defn_options, [compiler: EXLA]`, which JIT-compiles
+numerical functions (training, inference) through Google's XLA compiler for
+10-100x speedup. In tests, the `Nx.Defn.Evaluator` compiler is used instead
+for determinism and fast startup.
 
 ## Mix Tasks
 
@@ -703,11 +710,12 @@ difference between 100ms inference (unusable) and 5-15ms (fast).
 Usage: mix tetris_gpt.record [options]
 
 Options:
-  --games N        Number of 4-player bot battles to record (default: 100)
-  --difficulty D   Bot difficulty level: hard | battle (default: hard)
-  --output PATH    Output directory (default: priv/tetris_gpt/data/)
+  --games, -g N        Number of 4-player bot battles to record (default: 100)
+  --difficulty, -d D   Bot difficulty level: hard | battle (default: hard)
+  --output, -o PATH    Output directory (default: priv/tetris_gpt/data)
 
-Records bot-vs-bot games and saves placement sequences to disk.
+Records bot-vs-bot games, converts to sliding-window sequences, and saves to
+sequences.bin in the output directory.
 ```
 
 ### `mix tetris_gpt.train`
@@ -718,12 +726,13 @@ Usage: mix tetris_gpt.train [options]
 Options:
   --epochs N       Training epochs (default: 50)
   --batch-size N   Batch size (default: 32)
-  --seq-len N      Sequence length (default: 64)
   --lr FLOAT       Learning rate (default: 3e-4)
-  --data PATH      Training data directory (default: priv/tetris_gpt/data/)
-  --checkpoint P   Resume from checkpoint path
+  --data PATH      Training data path (default: priv/tetris_gpt/data/sequences.bin)
+  --output PATH    Output directory for params (default: priv/tetris_gpt/checkpoints)
 
-Trains the transformer model on recorded game data.
+Trains the transformer model on recorded game data. Does a 90/10
+train/validation split. Saves final parameters to final_params.nx
+in the output directory.
 ```
 
 ### `mix tetris_gpt.benchmark`
@@ -733,25 +742,11 @@ Usage: mix tetris_gpt.benchmark [options]
 
 Options:
   --games N          Number of benchmark games (default: 20)
-  --checkpoint PATH  Model checkpoint to evaluate
+  --checkpoint PATH  Model checkpoint to evaluate (required)
   --opponents DIFF   Opponent difficulty: easy | medium | hard (default: easy)
 
-Runs TetrisGPT against heuristic bots and reports win rates.
+Loads a trained model checkpoint and runs it against heuristic bots.
 ```
-
-## Future: CNN + Transformer Hybrid (Approach B)
-
-When we're ready to experiment with the CNN variant, we implement a new
-`TetrisGPT.Strategies.CnnTransformer` module:
-
-**Changes from Approach A:**
-- Board encoding: instead of flatten → linear, use 2 conv layers (3×3 kernels,
-  16 and 32 filters) over the 20×10 grid → spatial features → flatten → project
-- The CNN learns spatial patterns (T-spin holes, wells, step structures)
-  that a linear projection might miss
-- Everything else (transformer layers, training pipeline, agent) stays the same
-
-The Strategy behaviour means we swap one line in the config to switch models.
 
 ## Glossary
 

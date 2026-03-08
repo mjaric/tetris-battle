@@ -47,7 +47,12 @@ defmodule Tetris.MixProject do
       {:ueberauth_google, "~> 0.12"},
       {:ueberauth_github, "~> 0.8"},
       {:ueberauth_discord, "~> 0.7"},
-      {:gnat, "~> 1.13"}
+      {:gnat, "~> 1.13"},
+      {:nx, "~> 0.11"},
+      {:axon, "~> 0.8"},
+      {:exla, "~> 0.11"},
+      {:polaris, "~> 0.1"},
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -60,6 +65,14 @@ defmodule Tetris.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        "test.watch": :test
+      ]
     ]
   end
 end
