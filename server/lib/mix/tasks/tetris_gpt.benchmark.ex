@@ -18,7 +18,8 @@ defmodule Mix.Tasks.TetrisGpt.Benchmark do
 
   use Mix.Task
 
-  alias TetrisGpt.Training.Trainer
+  alias TetrisGpt.Strategies.DecoderOnly
+  alias TetrisGpt.Training.BenchmarkSimulation
 
   require Logger
 
@@ -41,19 +42,54 @@ defmodule Mix.Tasks.TetrisGpt.Benchmark do
     opponents =
       opts
       |> Keyword.get(:opponents, "easy")
-      |> String.to_existing_atom()
+      |> String.to_atom()
 
     Logger.info("Loading model from #{checkpoint}...")
-    _params = Trainer.load_params(checkpoint)
+    strategy_state = DecoderOnly.init(checkpoint: checkpoint)
 
     Logger.info(
       "Benchmarking TetrisGpt vs #{opponents} bots " <>
         "(#{num_games} games)..."
     )
 
+    summary =
+      BenchmarkSimulation.run_benchmark(
+        DecoderOnly,
+        strategy_state,
+        num_games: num_games,
+        difficulty: opponents
+      )
+
+    report_results(summary, opponents)
+  end
+
+  defp report_results(summary, opponents) do
+    Logger.info("")
+    Logger.info("=== Benchmark Results ===")
+
+    Logger.info("Games: #{summary.games} | Opponents: #{opponents}")
+
+    win_pct = Float.round(summary.win_rate * 100, 1)
+
     Logger.info(
-      "Model loaded. Battle simulation not yet implemented " <>
-        "- model checkpoint is valid."
+      "GPT wins: #{summary.gpt_wins}/#{summary.games} " <>
+        "(#{win_pct}%)"
     )
+
+    Logger.info("Avg GPT lines: #{Float.round(summary.avg_gpt_lines, 1)}")
+
+    Logger.info("Avg GPT pieces: #{Float.round(summary.avg_gpt_pieces, 1)}")
+
+    Logger.info("")
+
+    Enum.each(summary.results, fn r ->
+      result = if r.gpt_won, do: "WIN", else: "LOSS"
+      gpt = r.stats[0]
+
+      Logger.info(
+        "  Game #{r.game_num}: #{result} | " <>
+          "lines=#{gpt.lines} pieces=#{gpt.pieces_placed}"
+      )
+    end)
   end
 end

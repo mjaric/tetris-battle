@@ -27,4 +27,4 @@ config :tetris, Platform.Streaming, enabled: false
 
 # Nx: no EXLA in tests — pure Elixir backend, no JIT compilation overhead
 config :nx, :default_backend, Nx.BinaryBackend
-config :nx, :default_defn_options, [compiler: Nx.Defn.Evaluator]
+config :nx, :default_defn_options, compiler: Nx.Defn.Evaluator

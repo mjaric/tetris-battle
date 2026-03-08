@@ -38,6 +38,6 @@ config :tetris, Platform.Streaming,
 # Nx: BinaryBackend for regular tensor ops (no process overhead).
 # EXLA compiles defn functions (training, inference) via JIT.
 config :nx, :default_backend, Nx.BinaryBackend
-config :nx, :default_defn_options, [compiler: EXLA]
+config :nx, :default_defn_options, compiler: EXLA
 
 import_config "#{config_env()}.exs"
