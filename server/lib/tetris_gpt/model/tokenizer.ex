@@ -24,23 +24,31 @@ defmodule TetrisGpt.Model.Tokenizer do
   @type rotation :: 0 | 1 | 2 | 3
   @type column :: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
   @type placement_index :: non_neg_integer()
-  @type placement :: %{rotation: rotation(), column: column()}
+  @type placement :: %{required(:rotation) => rotation(), required(:column) => column()}
   @type battle_context :: %{
-          pending_garbage_count: non_neg_integer(),
-          own_max_height: non_neg_integer(),
-          opponent_max_height: non_neg_integer(),
-          combo_count: non_neg_integer(),
-          lines: non_neg_integer(),
-          score_diff: non_neg_integer(),
-          opponent_count: non_neg_integer(),
-          alive: boolean()
+          required(:pending_garbage_count) => non_neg_integer(),
+          required(:own_max_height) => non_neg_integer(),
+          required(:opponent_max_height) => non_neg_integer(),
+          required(:combo_count) => non_neg_integer(),
+          required(:lines) => non_neg_integer(),
+          required(:score_diff) => non_neg_integer(),
+          required(:opponent_count) => non_neg_integer(),
+          required(:alive) => boolean()
         }
   @type timestep :: %{
-          board: board,
-          current_piece: piece(),
-          next_piece: piece(),
-          battle_context: battle_context(),
-          placement: placement()
+          required(:board) => board,
+          required(:current_piece) => piece(),
+          required(:next_piece) => piece(),
+          required(:battle_context) => battle_context(),
+          required(:placement) => placement()
+        }
+  @type structured_tensor_map :: %{
+          required(:board) => Nx.Tensor.t(),
+          required(:current_piece) => Nx.Tensor.t(),
+          required(:next_piece) => Nx.Tensor.t(),
+          required(:battle_context) => Nx.Tensor.t(),
+          required(:placement) => Nx.Tensor.t(),
+          required(:mask) => Nx.Tensor.t()
         }
 
   # Normalization constants for battle context features.
@@ -106,7 +114,7 @@ defmodule TetrisGpt.Model.Tokenizer do
   end
 
   @doc "Decode placement index back to {rotation, column}."
-  @spec decode_placement(index :: placement_index) :: placement()
+  @spec decode_placement(index :: placement_index()) :: placement()
   def decode_placement(index) when index in 0..39 do
     %{rotation: div(index, 10), column: rem(index, 10)}
   end
@@ -166,9 +174,7 @@ defmodule TetrisGpt.Model.Tokenizer do
 
     * `:seq_len` - target sequence length (default: 64)
   """
-  @spec encode_structured_sequence([timestep()], keyword()) :: %{
-          String.t() => Nx.Tensor.t()
-        }
+  @spec encode_structured_sequence([timestep()], keyword()) :: structured_tensor_map()
   def encode_structured_sequence(timesteps, opts \\ []) do
     seq_len = Keyword.get(opts, :seq_len, 64)
 
@@ -194,6 +200,7 @@ defmodule TetrisGpt.Model.Tokenizer do
         placement_index(ts.placement.rotation, ts.placement.column)
       end)
 
+    # Build padded tensors
     pad_board = Nx.broadcast(0.0, {200})
     pad_battle = Nx.broadcast(0.0, {8})
 
@@ -224,12 +231,12 @@ defmodule TetrisGpt.Model.Tokenizer do
     mask_tensor = Nx.tensor(mask_list, type: :f32)
 
     %{
-      "board" => board_tensor,
-      "current_piece" => current_piece_tensor,
-      "next_piece" => next_piece_tensor,
-      "battle_context" => battle_context_tensor,
-      "placement" => placement_tensor,
-      "mask" => mask_tensor
+      board: board_tensor,
+      current_piece: current_piece_tensor,
+      next_piece: next_piece_tensor,
+      battle_context: battle_context_tensor,
+      placement: placement_tensor,
+      mask: mask_tensor
     }
   end
 end
