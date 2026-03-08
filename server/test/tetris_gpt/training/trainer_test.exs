@@ -29,14 +29,8 @@ defmodule TetrisGpt.Training.TrainerTest do
         type: :s32
       )
 
-    {nxt_piece, key} =
+    {nxt_piece, _key} =
       Nx.Random.randint(key, 0, 7,
-        shape: {batch_size, seq_len},
-        type: :s32
-      )
-
-    {placement, _key} =
-      Nx.Random.randint(key, 0, 40,
         shape: {batch_size, seq_len},
         type: :s32
       )
@@ -46,7 +40,6 @@ defmodule TetrisGpt.Training.TrainerTest do
       "current_piece" => cur_piece,
       "next_piece" => nxt_piece,
       "battle_context" => battle_ctx,
-      "placement" => placement,
       "mask" => Nx.broadcast(1.0, {batch_size, seq_len})
     }
   end

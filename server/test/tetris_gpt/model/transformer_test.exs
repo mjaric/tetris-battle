@@ -37,7 +37,6 @@ defmodule TetrisGpt.Model.TransformerTest do
         "current_piece" => Nx.tensor([[0, 1, 2, 3, 4, 5, 6, 0]]),
         "next_piece" => Nx.tensor([[1, 2, 3, 4, 5, 6, 0, 1]]),
         "battle_context" => battle_ctx,
-        "placement" => Nx.tensor([[0, 5, 10, 15, 20, 25, 30, 35]]),
         "mask" => Nx.tensor([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]])
       }
 
@@ -61,7 +60,6 @@ defmodule TetrisGpt.Model.TransformerTest do
         "current_piece" => Nx.tensor([[0, 1, 2, 3, 4, 5, 6, 0]]),
         "next_piece" => Nx.tensor([[1, 2, 3, 4, 5, 6, 0, 1]]),
         "battle_context" => battle_ctx,
-        "placement" => Nx.tensor([[0, 5, 10, 15, 20, 25, 30, 35]]),
         "mask" => Nx.tensor([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]])
       }
 

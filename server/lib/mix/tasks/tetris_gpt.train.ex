@@ -80,7 +80,7 @@ defmodule Mix.Tasks.TetrisGpt.Train do
       batches
       |> Stream.cycle()
       |> Stream.map(fn {input_map, target, _mask} ->
-        {input_map, target}
+        {Map.delete(input_map, "placement"), target}
       end)
 
     Logger.info("Starting training for #{epochs} epochs...")

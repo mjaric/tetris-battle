@@ -95,6 +95,7 @@ export default function MultiBoard({ gameState, myPlayerId, latency }: MultiBoar
               latency={isMe ? latency : undefined}
               events={isMe ? myEvents : (opponentEvents.get(id) ?? [])}
               dangerLevel={isMe ? dangerLevel : 'none'}
+              botDifficulty={player.bot_difficulty}
             />
           );
         })}

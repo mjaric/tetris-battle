@@ -142,19 +142,22 @@ defmodule TetrisGpt.GptBotPlayer do
   defp handle_piece_change(player, state) do
     piece_id = piece_identifier(player)
 
-    if piece_id != state.last_piece_id and
-         state.phase != :executing do
-      Process.send_after(self(), :think, 10)
+    cond do
+      # Same piece, still working on it
+      piece_id == state.last_piece_id ->
+        {:noreply, state}
 
-      {:noreply,
-       %{
-         state
-         | last_piece_id: piece_id,
-           phase: :thinking,
-           action_queue: []
-       }}
-    else
-      {:noreply, state}
+      # New piece arrived — think regardless of current phase
+      true ->
+        Process.send_after(self(), :think, 10)
+
+        {:noreply,
+         %{
+           state
+           | last_piece_id: piece_id,
+             phase: :thinking,
+             action_queue: []
+         }}
     end
   end
 

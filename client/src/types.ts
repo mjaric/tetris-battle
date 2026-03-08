@@ -18,6 +18,7 @@ export interface PlayerBroadcast {
   target: string | null;
   pending_garbage: number;
   is_bot?: boolean;
+  bot_difficulty?: string;
   events: GameEvent[];
 }
 

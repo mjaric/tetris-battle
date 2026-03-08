@@ -24,23 +24,19 @@ defmodule TetrisGpt.Model.Transformer do
     d_model = config.d_model
     pe = config.piece_embed_dim
 
-    # Inputs
+    # Inputs (placement is NOT an input — it's the prediction target)
     board = Axon.input("board", shape: {nil, nil, config.board_dim})
     current_piece = Axon.input("current_piece", shape: {nil, nil})
     next_piece = Axon.input("next_piece", shape: {nil, nil})
     battle_ctx = Axon.input("battle_context", shape: {nil, nil, config.battle_ctx_dim})
-    placement = Axon.input("placement", shape: {nil, nil})
     _mask = Axon.input("mask", shape: {nil, nil})
 
-    # Embed pieces and placements
+    # Embed pieces
     cur_embed =
       Axon.embedding(current_piece, config.num_piece_types, pe, name: "cur_piece_embed")
 
     nxt_embed =
       Axon.embedding(next_piece, config.num_piece_types, pe, name: "nxt_piece_embed")
-
-    act_embed =
-      Axon.embedding(placement, config.num_placements, pe, name: "action_embed")
 
     # Project board down to a manageable dimension
     board_proj_dim = max(div(d_model, 2), 8)
@@ -49,7 +45,7 @@ defmodule TetrisGpt.Model.Transformer do
     # Concatenate all token features then project to d_model
     token =
       Axon.concatenate(
-        [board_proj, cur_embed, nxt_embed, battle_ctx, act_embed],
+        [board_proj, cur_embed, nxt_embed, battle_ctx],
         axis: 2,
         name: "token_concat"
       )

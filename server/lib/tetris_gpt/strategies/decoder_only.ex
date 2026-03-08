@@ -45,7 +45,6 @@ defmodule TetrisGpt.Strategies.DecoderOnly do
 
   @impl true
   def predict(state, context) do
-    # Build timestep with placeholder placement
     timestep = %{
       board: context.board,
       current_piece: context.current_piece,
@@ -57,10 +56,11 @@ defmodule TetrisGpt.Strategies.DecoderOnly do
     history =
       Enum.take(state.history ++ [timestep], -@max_history)
 
-    # Encode and add batch dimension for Axon
+    # Encode, strip placement (model doesn't use it), add batch dim
     input_map =
       history
       |> Tokenizer.encode_structured_sequence(seq_len: state.config.max_seq_len)
+      |> Map.delete("placement")
       |> add_batch_dim()
 
     # Run inference
@@ -116,7 +116,6 @@ defmodule TetrisGpt.Strategies.DecoderOnly do
       "current_piece" => Nx.broadcast(0, {1, seq}),
       "next_piece" => Nx.broadcast(0, {1, seq}),
       "battle_context" => Nx.broadcast(0.0, {1, seq, config.battle_ctx_dim}),
-      "placement" => Nx.broadcast(0, {1, seq}),
       "mask" => Nx.broadcast(1.0, {1, seq})
     }
   end
