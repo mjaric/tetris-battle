@@ -301,6 +301,17 @@ defmodule TetrisGame.GameRoom do
           room_pid: self()
         ]
 
+        bot_opts =
+          if difficulty == :gpt do
+            Keyword.merge(bot_opts,
+              bot_module: TetrisGpt.GptBotPlayer,
+              strategy: TetrisGpt.Strategies.DecoderOnly,
+              strategy_opts: [checkpoint: nil]
+            )
+          else
+            bot_opts
+          end
+
         case BotSupervisor.start_bot(bot_opts) do
           {:ok, bot_pid} ->
             Process.monitor(bot_pid)
