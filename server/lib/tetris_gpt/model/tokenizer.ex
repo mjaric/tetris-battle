@@ -43,12 +43,7 @@ defmodule TetrisGpt.Model.Tokenizer do
           required(:placement) => placement()
         }
   @type structured_tensor_map :: %{
-          required(:board) => Nx.Tensor.t(),
-          required(:current_piece) => Nx.Tensor.t(),
-          required(:next_piece) => Nx.Tensor.t(),
-          required(:battle_context) => Nx.Tensor.t(),
-          required(:placement) => Nx.Tensor.t(),
-          required(:mask) => Nx.Tensor.t()
+          required(String.t()) => Nx.Tensor.t()
         }
 
   # Normalization constants for battle context features.
