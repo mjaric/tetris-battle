@@ -42,9 +42,7 @@ export default function WaitingRoom({ gameState, isHost, startGame, onLeave, cha
               <div className="flex items-center gap-2">
                 <Avatar name={p.nickname} size="sm" />
                 <span className="font-body text-sm text-text-primary">{p.nickname}</span>
-                {p.is_bot && (
-                  <Badge variant="bot">{p.bot_difficulty ? p.bot_difficulty.toUpperCase() : 'BOT'}</Badge>
-                )}
+                {p.is_bot && <Badge variant="bot">{p.bot_difficulty ? p.bot_difficulty.toUpperCase() : 'BOT'}</Badge>}
               </div>
               <div className="flex items-center gap-2">
                 {gameState && id === gameState.host && <Badge variant="rank">HOST</Badge>}
