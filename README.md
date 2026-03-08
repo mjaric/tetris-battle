@@ -83,9 +83,11 @@ Where `<provider>` is `google`, `github`, or `discord`.
 ## Game Modes
 
 - **Solo** — client-side only via `useTetris` hook, no server involvement
-- **Multiplayer** — server-authoritative rooms with bot players (Easy/Medium/Hard difficulty)
+- **Multiplayer** — server-authoritative rooms with bot players (Easy/Medium/Hard/Battle/GPT difficulty)
 
 ## Bot Training
+
+### Heuristic Bots (Genetic Algorithm)
 
 The Hard bot's heuristic weights are evolved via genetic algorithm. The GA simulates thousands of headless games with pruned 2-piece lookahead, selecting weight vectors that maximize average lines cleared.
 
@@ -96,8 +98,32 @@ mix bot.evolve --population 50 --generations 100 --games 30
 
 Supports distributed evaluation across multiple BEAM nodes. See `docs/notes/bot-evolution.md`.
 
+### TetrisGPT (Transformer Neural Network)
+
+TetrisGPT is a decoder-only transformer (~121K parameters) that learns Tetris placement strategy from recorded bot-vs-bot games. Unlike the heuristic bots that evaluate each position independently, TetrisGPT maintains temporal context — it processes a sliding window of the last 64 game states to inform placement decisions.
+
+Built with Nx, Axon, EXLA, and Polaris. Three-step pipeline:
+
+```bash
+cd server
+
+# 1. Record bot-vs-bot battle games as training data
+mix tetris_gpt.record --games 100
+
+# 2. Train the transformer model
+mix tetris_gpt.train --epochs 50
+
+# 3. Benchmark against heuristic bots
+mix tetris_gpt.benchmark --checkpoint priv/tetris_gpt/checkpoints/final_params.nx
+```
+
+Trained model parameters are saved to `priv/tetris_gpt/checkpoints/final_params.nx` and auto-loaded when a GPT bot joins a game room. See `server/README.md` for full mix task options.
+
 ## Documentation
 
+- `docs/plans/2026-02-22-tetris-gpt-design.md` — TetrisGPT design: architecture, input encoding, training pipeline, agent integration
+- `docs/plans/tetris-gpt-architecture-diagram.md` — Full network diagram with layer-by-layer tensor flow
+- `docs/notes/tetris-gpt-dataflow.md` — Compact tensor shape trace through all layers
 - `docs/notes/bot-evolution.md` — GA pipeline, distributed training, all options
 - `docs/notes/bot-performance.md` — Bot strengths, weaknesses, improvement roadmap
 - `docs/notes/run-notes.md` — Evolution run observations and optimization history
